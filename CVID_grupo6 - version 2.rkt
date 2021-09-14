@@ -315,8 +315,6 @@
       (else exp)
       )))
 
- ;;(globales ("global" "(" (separated-list identificador "=" expresion ",") ")") global)
-
 ;Ambiente
 (define-datatype environment environment?
   (empty-env-record)
