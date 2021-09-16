@@ -642,5 +642,131 @@ in
 invoca factorial(5)
 
 ")
+;******************************************************************************************
+;                               Construidos automáticamente
+;******************************************************************************************
+
+(sllgen:make-define-datatypes scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto)
+
+(define show-the-datatypes
+  (lambda () (sllgen:list-define-datatypes scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto)))
+
+;*******************************************************************************************
+;                                      Parser & Scanner
+;********************************************************************************************
+;El FrontEnd (Análisis léxico (scanner) y sintáctico (parser) integrados)
+;*********************************************************************************************
+(define scan&parse
+  (sllgen:make-string-parser scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto))
+
+;El Analizador Léxico (Scanner)
+
+(define just-scan
+  (sllgen:make-string-scanner scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto))
+
+;El Interpretador (FrontEnd + Evaluación + señal para lectura )
+
+(define interpretador
+  (sllgen:make-rep-loop  "--> "
+    (lambda (pgm) (eval-program  pgm)) 
+    (sllgen:make-stream-parser 
+      scanner-spec-interpretador-proyecto
+      gramatica-interpretador-proyecto)))
+
+
+;*******************************************************************************************
+;                                   El Interprete
+;******************************************************************************************
+;eval-program: <programa> -> numero
+; función que evalúa un programa teniendo en cuenta un ambiente dado (se inicializa dentro del programa)
+
+(define eval-program
+  (lambda (pgm)
+    (cases program pgm
+      (a-program (exp)
+                 (eval-expression exp body (init-env))))))
+;**********************************************************************************************
+;                                              Ambiente inicial
+;**********************************************************************************************
+(define init-env
+    (lambda ()
+ (empty-env)))
+
+;eval-expression: <expression> <enviroment> -> numero
+; evalua la expresión en el ambiente de entrada
+(define eval-expression
+  (lambda (exp env)
+      (cases expression exp
+       (entero-lit (num) num)
+        (symbol (letra) letra)
+        (caracter-lit (caracter) caracter)
+        (cadena-lit (cadena) cadena)
+        (flotante-lit (float) float)
+        ( octal-lit (arbno entero) entero)
+        
+      (id-lit (id) (apply-env env id))
+      (id-ref-exp (id-ref) id-ref)
+      (var-exp (ids exps body)
+               (let ((args (eval-rands exps env)))
+                 (eval-expression body (extend-env ids args env))))
+      (cons-exp (ids exps body) ids)
+      (rec-exp (proc-names idss bodies letrec-body)
+               (eval-expression letrec-body
+                                (extend-env-recursively proc-names idss bodies env)))
+
+      ;;;;;; Mutadores ;;;;;;
+
+      (set-var-exp (id exp)
+               (begin
+                 (setref!
+                  (apply-env-ref env id)
+                  (eval-expression exp env))
+                 1))
+
+      ;;;;;; Constructores ;;;;;;
+
+      (list-exp (exps) (list-unparse exps env))
+      (vector-exp (exps) (vector-unparse exps env))
+      (reg-exp (id exp ids exps) (reg-unparse id exp ids exps env))
+      (aux-exp-bool (exp)
+                    (apply-exp-bool exp env))
+
+      ;;;;;; Estructuras de control ;;;;;;
+
+      (begin-exp (exp exps)
+                 (let loop ((acc (eval-expression exp env))
+                            (exps exps))
+                   (if (null? exps) acc
+                       (loop (eval-expression (car exps) env) (cdr exps)))))
+      (if-exp (exp-bool true-exp false-exp)
+              (if (eqv? (apply-exp-bool exp-bool env) 'true)
+                  (eval-expression true-exp env)
+                  (eval-expression false-exp env)))
+      (while-exp (exp-bool exp) (while exp-bool exp env))
+      (for-exp (id var exp-for exp1 exp2) (for id var exp-for exp1 exp2 env 'null))
+      
+      ;;;;;; Primitivas ;;;;;;
+      (arithmetic-primapp-exp (prim rands)
+                              (let ((args (eval-rands rands env)))
+                                (apply-arithmetic-primitive prim args)))
+      (hexadecimal-primapp-exp (prim rands)
+                              (let ((args (eval-rands rands env)))
+                                (apply-hexadecimal-primitive prim args env)))
+      (string-primapp-exp (prim rands)
+                          (let ((args (eval-rands rands env)))
+                                (apply-string-primitive prim args)))
+      (list-primapp-exp (prim rands)
+                        (let ((args (eval-rands rands env)))
+                                (apply-list-primitive prim args)))
+      (vector-primapp-exp (prim rands)
+                                 (let ((args (eval-rands rands env)))
+                                (apply-vector-primitive prim args env)))
+      (reg-primapp-exp (prim exps ids)
+                       (let ((args (eval-rands exps env)))
+                                (apply-reg-primitive prim args ids env)))
+
+      (print-exp (exp) (apply-print exp env))
+        
+        )))
 
 
