@@ -132,7 +132,12 @@
 ;;                      ::= append
 
 
-(define lexica
+;**************************************************************************************
+;                               Lexica
+;**************************************************************************************
+  
+  (define scanner-spec-interpretador-proyecto
+  '(
   '(
      (epacio (whitespace) skip)
      (comentario ("//" (arbno (not #\newline)) ) skip)
@@ -146,8 +151,11 @@
     )
   )
 
-(define gramatica
+;*******************************************************************************************
+;                                     Gramatica
+;*******************************************************************************************
 
+(define gramatica-interpretador-proyecto
 '(
    (programa (globales expresion) un-programa)
 
