@@ -705,39 +705,30 @@ invoca factorial(5)
 (define eval-expression
   (lambda (exp env)
       (cases expression exp
+
+  ; tipos de datos      
+        (global (idglob glob)glob)
        (entero-lit (num) num)
         (symbol (letra) letra)
         (caracter-lit (caracter) caracter)
-        (cadena-lit (cadena) cadena)
+        (cadena-lit (arbno cadena) cadena)
         (flotante-lit (float) float)
-        ( octal-lit (arbno entero) entero)
-        
-      (id-lit (id) (apply-env env id))
-      (id-ref-exp (id-ref) id-ref)
-      (var-exp (ids exps body)
-               (let ((args (eval-rands exps env)))
-                 (eval-expression body (extend-env ids args env))))
-      (cons-exp (ids exps body) ids)
-      (rec-exp (proc-names idss bodies letrec-body)
-               (eval-expression letrec-body
-                                (extend-env-recursively proc-names idss bodies env)))
+        (octal-lit (arbno oct) oct)
+        (id-lit (id) (ap-env env id))
+       (id-ref (id-ref) id-ref)
+       (var-exp (ids exps body)
+       (cons-exp (ids exps body) ids)
+       (rec-exp (proc-names idss bodies letrec-body)
+             
 
-      ;;;;;; Mutadores ;;;;;;
-
-      (set-var-exp (id exp)
-               (begin
-                 (setref!
-                  (apply-env-ref env id)
-                  (eval-expression exp env))
-                 1))
+      
 
       ;;;;;; Constructores ;;;;;;
 
-      (list-exp (exps) (list-unparse exps env))
-      (vector-exp (exps) (vector-unparse exps env))
-      (reg-exp (id exp ids exps) (reg-unparse id exp ids exps env))
-      (aux-exp-bool (exp)
-                    (apply-exp-bool exp env))
+      (lista-exp (exps)exps)
+      (vector-exp (exps) exps)
+      (reg-exp (id exp ids exps) id exp ids exps)
+      (exp-bool-exp (exp)exp)
 
       ;;;;;; Estructuras de control ;;;;;;
 
@@ -752,29 +743,3 @@ invoca factorial(5)
                   (eval-expression false-exp env)))
       (while-exp (exp-bool exp) (while exp-bool exp env))
       (for-exp (id var exp-for exp1 exp2) (for id var exp-for exp1 exp2 env 'null))
-      
-      ;;;;;; Primitivas ;;;;;;
-      (arithmetic-primapp-exp (prim rands)
-                              (let ((args (eval-rands rands env)))
-                                (apply-arithmetic-primitive prim args)))
-      (hexadecimal-primapp-exp (prim rands)
-                              (let ((args (eval-rands rands env)))
-                                (apply-hexadecimal-primitive prim args env)))
-      (string-primapp-exp (prim rands)
-                          (let ((args (eval-rands rands env)))
-                                (apply-string-primitive prim args)))
-      (list-primapp-exp (prim rands)
-                        (let ((args (eval-rands rands env)))
-                                (apply-list-primitive prim args)))
-      (vector-primapp-exp (prim rands)
-                                 (let ((args (eval-rands rands env)))
-                                (apply-vector-primitive prim args env)))
-      (reg-primapp-exp (prim exps ids)
-                       (let ((args (eval-rands exps env)))
-                                (apply-reg-primitive prim args ids env)))
-
-      (print-exp (exp) (apply-print exp env))
-        
-        )))
-
-
