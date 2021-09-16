@@ -706,7 +706,7 @@ invoca factorial(5)
   (lambda (exp env)
       (cases expression exp
 
-  ; tipos de datos      
+   ; tipos de datos      
         (global (idglob glob)glob)
        (entero-lit (num) num)
         (symbol (letra) letra)
@@ -716,9 +716,11 @@ invoca factorial(5)
         (octal-lit (arbno oct) oct)
         (id-lit (id) (ap-env env id))
        (id-ref (id-ref) id-ref)
-       (var-exp (ids exps body)
+       (var-exp (ids exps body) exps)
        (cons-exp (ids exps body) ids)
        (rec-exp (proc-names idss bodies letrec-body)
+       (unic-exp (ids exps  body)  ids)      
+      
              
 
       
