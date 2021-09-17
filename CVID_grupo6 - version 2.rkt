@@ -678,8 +678,8 @@ invoca factorial(5)
 (define eval-program
   (lambda (pgm)
     (cases program pgm
-      (a-program (exp)
-                 (eval-expression exp body (init-env))))))
+      (a-program (glob exp)
+                 (eval-expression exp(init-env))))))
 ;**********************************************************************************************
 ;                                              Ambiente inicial
 ;**********************************************************************************************
