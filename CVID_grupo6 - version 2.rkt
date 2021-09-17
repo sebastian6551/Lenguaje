@@ -323,19 +323,6 @@
       (else exp)
       )))
 
-;Ambiente
-(define-datatype environment environment?
-  (empty-env-record)
-  (extended-env-record
-   (syms (list-of symbol?))
-   (vec vector?)
-   (env environment?)))
-
-;empty-env:
-(define empty-env  
-  (lambda ()
-    (empty-env-record)))  
-
 ;;Ejemplos
 
 ;;Globales
@@ -722,8 +709,8 @@ invoca factorial(5)
        (unic-exp (ids exps  body)  ids)      
 
       ;;;;;; Constructores ;;;;;;
-      (lista-exp (exps)exps)
-      (vector-exp (exps) exps)
+      (lista-exp (exps) exps env)
+      (vector-exp (exps) exps env)
       (reg-exp (id exp ids exps) id exp ids exps)
       (exp-bool-exp (exp)exp)
 
