@@ -692,9 +692,7 @@ invoca factorial(5)
 (define eval-expression
   (lambda (exp env)
       (cases expression exp
-
-   ; tipos de datos      
-        (global (idglob glob)glob)
+   ; tipos de datos     
        (entero-lit (num) num)
         (symbol (letra) letra)
         (caracter-lit (caracter) caracter)
