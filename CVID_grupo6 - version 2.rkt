@@ -240,8 +240,8 @@
    (expresion (expresion-bool) exp-bool-exp)
    (expresion-bool ("compare" expresion pred-prim expresion) compare-booleano-exp)
    (expresion-bool (oper-bin-bool "(" expresion-bool ")" "(" expresion-bool ")") evalprim-booleano-bin-exp)
-   (expresion-bool ("true") booleano-lit)
-   (expresion-bool ("false") booleano-lit)
+   (expresion-bool ("true") booleano-lit-true)
+   (expresion-bool ("false") booleano-lit-false)
    (expresion-bool (oper-un-bool expresion-bool) evalprim-booleano-un-exp)
                     
    (pred-prim ("<") menor-que)
@@ -327,6 +327,26 @@
 (define empty-env  
   (lambda ()
     (empty-env-record)))  
+    
+    
+(define buscar-pred-prim
+ (lambda (pred-pr args)
+   (cases pred-prim pred-pr
+     (menor-que () (if (< (car args) (cadr args) ) #t #f))
+     (mayor-que () (if (> (car args) (cadr args) ) #t #f))
+     (menor-igual ()(if (<= (cadr args) ) #t #f))
+     (mayor-igual ()(if (>= (car args) (cadr args) ) #t #f))
+     (igual-igual ()(if (= (car args) (cadr args) ) #t #f))
+     (diferente ()(if  (not( = (car args) (cadr args) )) #t #f);revisar
+     ))))
+
+(define buscar-oper-bin-bool
+ (lambda (oper-bin args)
+   (cases oper-bin-bool oper-bin
+     (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
+     (or-oper-bin ()(if (or (car args) (cadr args)) #t #f))
+     (xor-oper-bin ()(if (and (car args) (cadr args)) #t #f));revisar
+     )))
 
 ;;Ejemplos
 
