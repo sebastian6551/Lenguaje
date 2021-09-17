@@ -454,7 +454,7 @@
      ))))
 
 ;; apply-oper-bin-bool
-(define apply
+(define apply-oper-bin-bool
  (lambda (oper-bin args)
    (cases oper-bin-bool oper-bin
      (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
