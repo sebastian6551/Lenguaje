@@ -727,8 +727,9 @@ invoca factorial(5)
       (reg-exp (id exp ids exps) id exp ids exps)
       (exp-bool-exp (exp)exp)
 
-      ;;;;;; Estructuras de control ;;;;;;
-      (begin-exp (exp exps)
+     ;;;;;; Estructuras de control ;;;;;;
+
+      (seq-exp (exp exps)
                  (let loop ((acc (eval-expression exp env))
                             (exps exps))
                    (if (null? exps) acc
@@ -740,6 +741,6 @@ invoca factorial(5)
       (while-exp (exp-bool exp) (while exp-bool exp env))
       (for-exp (id var exp-for exp1 exp2) (for id var exp-for exp1 exp2 env 'null))
 
-        )))
+        ))
       
     
