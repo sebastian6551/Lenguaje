@@ -132,36 +132,27 @@
 ;;                      ::= append
 
 
-;**************************************************************************************
-;                               Lexica
-;**************************************************************************************
-  
-  (define scanner-spec-interpretador-proyecto
-  '(
+(define lexica
   '(
      (epacio (whitespace) skip)
      (comentario ("//" (arbno (not #\newline)) ) skip)
-     (comentario ("%" (arbno (not #\newline)) ) skip)
      (identificador  (letter (arbno (or letter digit))) symbol)
      (entero (digit (arbno digit)) number)
      (entero ("-" digit (arbno digit)) number)
      (flotante (digit (arbno digit) "." digit (arbno digit)) number)
      (flotante ("-" digit (arbno digit) "." digit (arbno digit)) number)
      (caracter ("'" letter "'") symbol)
+     (cadena ("\"" (arbno (or letter whitespace)) "\"")  symbol)
     )
   )
 
-;*******************************************************************************************
-;                                     Gramatica
-;*******************************************************************************************
+(define gramatica
 
-(define gramatica-interpretador-proyecto
 '(
    (programa (globales expresion) un-programa)
 
    (globales ("global" "(" (separated-list identificador "=" expresion ",") ")") global)
-   
-   (expresion ("\""  (arbno identificador) "\"")  cadena-lit)
+   (expresion (cadena) cadena-lit)
    (expresion (caracter) caracter-lit)
    (expresion (entero) entero-lit)
    (expresion (flotante) flotante-lit)
@@ -225,7 +216,7 @@
    (expresion (lista-primitive-s "(" (separated-list expresion ",")")") lista-primapp-exp-s)
    
    ;;Para vectores
-   (expresion ("ref-vector" identificador) vector-ref)
+   (expresion ("ref-vector" "(" entero ")" identificador) vector-ref)
    (expresion ("vector?" "(" expresion ")") es-vector-exp)
    (expresion ("crear-vector" "(" (separated-list expresion ",")")") crear-vector-exp)
    
@@ -248,8 +239,8 @@
    (expresion (expresion-bool) exp-bool-exp)
    (expresion-bool ("compare" expresion pred-prim expresion) compare-booleano-exp)
    (expresion-bool (oper-bin-bool "(" expresion-bool ")" "(" expresion-bool ")") evalprim-booleano-bin-exp)
-   (expresion-bool ("true") booleano-lit)
-   (expresion-bool ("false") booleano-lit)
+   (expresion-bool ("true") booleano-lit-true)
+   (expresion-bool ("false") booleano-lit-false)
    (expresion-bool (oper-un-bool expresion-bool) evalprim-booleano-un-exp)
                     
    (pred-prim ("<") menor-que)
@@ -285,8 +276,7 @@
 (define just-scan
   (sllgen:make-string-scanner lexica gramatica))
 
-;El Interpretador (FrontEnd + Evaluación + señal para lectura )
-
+;; Interpretador
 (define interpretador
   (sllgen:make-rep-loop  "> "
     (lambda (prog) (eval-program  prog)) 
@@ -294,16 +284,12 @@
       lexica
       gramatica)))
 
-;El Interprete
-
-;eval-program: <programa> -> numero
-; función que evalúa un programa teniendo en cuenta un ambiente dado (se inicializa dentro del programa)
-
+;; eval-program:
 (define eval-program
   (lambda (prog)
     (cases programa prog
       (un-programa (globals exps)
-                 (eval-globales globals (empty-env))
+                 (eval-globales globals (global-env))
                  (eval-expresiones exps (empty-env))))))
 
 ;; Evalua las globales
@@ -314,14 +300,187 @@
     ;;De aquí se mandaría el cuerpo a eval-expresiones
       ))
 
+;; Global-env: ambiente para las variables globales
+(define global-env  
+  (lambda ()
+    (empty-env-record)))  
+
 ;; Evalua las expresiones
 (define eval-expresiones
   (lambda (exp env) 
     (cases expresion exp
+
+      ;; Tipos de datos
       (entero-lit (num) num)
-      ;;Aquí van los cases de las expresiones     
+      (caracter-lit (caract) caract)
+      (flotante-lit (flot) flot)
+      (cadena-lit (cadena) cadena)
+      (id-lit (id) (apply-env env id))
+      
+   ;; (octal-lit (oct) oct)
+   ;; (id-ref (id-ref) id-ref)
+      
+   ;; (var-exp (ids exps body) exps)
+   ;; (cons-exp (ids exps body) ids)
+   ;; (rec-exp (proc-names idss bodies letrec-body)  idss)
+   ;; (unic-exp (ids exps  body)  ids)      
+
+
+   ;; Constructores ;;;;;;
+      
+   ;; (lista-exp (exps) exps env)
+   ;; (vector-exp (exps) exps env)
+   ;; (reg-exp (id exp ids exps) id exp ids exps)
+   ;; (exp-bool-exp (exp) exp)
+
+      ;; Primitivas
+      (evalprim-bin-exp (exp1 prim-bin exp2) (eval-prim exp1 prim-bin exp2 env))
+      (evalprim-un-exp (prim-un exp) (apply-primitiva-unaria prim-un (eval-rand exp env)))
+
+      ;; Procedimientos
+      (definir-proc (ids body)(closure ids body env))
+      (invocar-proc (rator rands)
+                    (let ((proc (eval-expresiones rator env))
+                          (args (eval-rands rands env)))
+                      (if (procedimiento? proc)
+                          (apply-procedimiento proc args)
+                          (eopl:error 'eval-expresiones "Intenta aplicar algo que no es un procedimiento: ~s" proc))))
+      
+    ;;  Estructuras de control
+    ;;  (seq-exp (exp exps)
+    ;;           (let loop ((acc (eval-expresiones exp env)) (exps exps))
+    ;;               (if (null? exps)
+    ;;                   acc
+    ;;                   (loop (eval-expresiones (car exps) env) (cdr exps)))))
+    ;; (while-exp (exp-bool exp) (apply-while exp-bool exp env))
+    ;;  (for-exp (id var exp-for exp1 exp2) (for id var exp-for exp1 exp2 env 'null))
+
       (else exp)
       )))
+
+;; Cuenta los elemtos en una lista
+(define contar-lista
+  (lambda (l)
+    (if (null? l)
+        0
+        (+ 1 (contar-lista (cdr l)))
+    )))
+
+;; Buscar un símbolo en un ambiente
+(define apply-env
+  (lambda (env sym)
+    (cases environment env
+      (empty-env-record () (eopl:error 'apply-env "No se puede enlazar: ~s" sym))
+      (extended-env-record (syms vals env)
+                           (let ((pos (list-find-position sym syms)))
+                             (if (number? pos)
+                                 (list-ref vals pos)
+                                 (apply-env env sym)))))))
+
+;; Funciones auxiliares para encontrar la posición de un símbolo
+
+(define list-find-position
+  (lambda (sym los)
+    (list-index (lambda (sym1) (eqv? sym1 sym)) los)))
+
+(define list-index
+  (lambda (pred ls)
+    (cond
+      ((null? ls) #f)
+      ((pred (car ls)) 0)
+      (else (let ((list-index-r (list-index pred (cdr ls))))
+              (if (number? list-index-r)
+                (+ list-index-r 1)
+                #f))))))
+
+;; Evaluar primitivas binarias
+(define apply-primitiva-binaria
+  (lambda (exp1 prim exp2)
+    (cases primitiva-binaria prim
+      (primitiva-suma () (+ exp1 exp2))
+      (primitiva-resta () (- exp1 exp2))
+      (primitiva-mult () (* exp1 exp2))
+      (primitiva-div () (/ exp1 exp2))
+      (primitiva-residuo () (remainder exp1 exp2)))))
+
+(define eval-rands
+  (lambda (rands env)
+    (map (lambda (x) (eval-rand x env)) rands)))
+
+(define eval-rand
+  (lambda (rand env)
+    (eval-expresiones rand env)))
+
+;; Funciones auxiliares para aplicar apply-primitiva-binaria
+(define eval-prim
+  (lambda (exp1 prim-bin exp2 env)
+    (apply-primitiva-binaria (eval-rand exp1 env) prim-bin (eval-rand exp2 env))))
+
+;; Evaluar primitivas unarias
+(define apply-primitiva-unaria
+  (lambda (prim exp)  
+    (cases primitiva-unaria prim
+      (primitiva-incrementar () (+ exp 1))
+      (primitiva-disminuir () (- exp 1)))
+    ))
+
+;; Procedimientos, clausura
+(define-datatype procedimiento procedimiento?
+  (closure
+   (ids (list-of symbol?))
+   (body expresion?)
+   (env environment?)))
+
+;; apply-procedimiento
+(define apply-procedimiento
+  (lambda (proc args)
+    (cases procedimiento proc
+      (closure (ids body env)
+               (if (eqv? (contar-lista args) (contar-lista ids))
+                   (eval-expresiones body (extend-env ids args env))
+                   (eopl:error 'apply-procedimiento "El número de argumentos esperado no coincide con el número dado: ~s" (contar-lista args))
+                   )))))
+
+;; apply-pred-prim condicionales
+(define apply-pred-prim
+ (lambda (pred-pr args)
+   (cases pred-prim pred-pr
+     (menor-que () (if (< (car args) (cadr args) ) #t #f))
+     (mayor-que () (if (> (car args) (cadr args) ) #t #f))
+     (menor-igual ()(if (<= (cadr args) ) #t #f))
+     (mayor-igual ()(if (>= (car args) (cadr args) ) #t #f))
+     (igual-igual ()(if (= (car args) (cadr args) ) #t #f))
+     (diferente ()(if  (not( = (car args) (cadr args) )) #t #f);revisar
+     ))))
+
+;; apply-oper-bin-bool
+(define apply-oper-bin-bool
+ (lambda (oper-bin args)
+   (cases oper-bin-bool oper-bin
+     (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
+     (or-oper-bin ()(if (or (car args) (cadr args)) #t #f))
+     (xor-oper-bin ()(if (and (car args) (cadr args)) #t #f));revisar
+     )))
+
+;; Ambiente
+(define-datatype environment environment?
+  (empty-env-record)
+  (extended-env-record
+   (syms (list-of symbol?))
+   (vals (list-of scheme-value?))
+   (env environment?)))
+
+(define scheme-value? (lambda (v) #t))
+
+;; Ambiente vacío:
+(define empty-env  
+  (lambda ()
+    (empty-env-record)))
+
+;; Ambiente extendido:
+(define extend-env
+  (lambda (syms vals env)
+    (extended-env-record syms vals env))) 
 
 ;;Ejemplos
 
@@ -421,7 +580,7 @@ end
 ;; Ejemplo paso por referencia vector
 (scan&parse "
 global (s = 4)
-invoca validaVector(ref-vector v, y)
+invoca validaVector(ref-vector (0) v, y)
 ")
 
 ;; Ejemplo get posicion vector
@@ -570,7 +729,6 @@ cond
 [(compare x > 0)(\"positivo\")]
 [(compare x < 0)(\"negativo\")]
 [(compare x == 0)(\"cero\")]
-
 else \"indefinido\"
 ")
 
@@ -609,18 +767,15 @@ end
 ;;Ejemplo filtro
 (scan&parse "
 global( listaA = [1,[4,5],a,'o',[k,l]])
-
  var
  filtro = funcion!(lista, pred)
  {
-
                         if compare lista == vacio
                          then vacio
                         else
                          cond
                           [(invoca pred(cabeza (lista)) ) (crear-lista ( cabeza (lista) , invoca filtro( pred , cuerpo (lista) )  ) )]                    
                             else invoca filtro ( pred, cuerpo (lista) )
-
                         end }
  in 9
 ")
@@ -628,104 +783,9 @@ global( listaA = [1,[4,5],a,'o',[k,l]])
 ;;Ejemplo Función factorial
 (scan&parse "
 global ()
-
 var factorial = funcion!(n){if compare n < 2
                 then 1
                 else (n * invoca factorial(¬¬ n)) end}
-
 in
 invoca factorial(5)
-
 ")
-;******************************************************************************************
-;                               Construidos automáticamente
-;******************************************************************************************
-
-(sllgen:make-define-datatypes scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto)
-
-(define show-the-datatypes
-  (lambda () (sllgen:list-define-datatypes scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto)))
-
-;*******************************************************************************************
-;                                      Parser & Scanner
-;********************************************************************************************
-;El FrontEnd (Análisis léxico (scanner) y sintáctico (parser) integrados)
-;*********************************************************************************************
-(define scan&parse
-  (sllgen:make-string-parser scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto))
-
-;El Analizador Léxico (Scanner)
-
-(define just-scan
-  (sllgen:make-string-scanner scanner-spec-interpretador-proyecto gramatica-interpretador-proyecto))
-
-;El Interpretador (FrontEnd + Evaluación + señal para lectura )
-
-(define interpretador
-  (sllgen:make-rep-loop  "--> "
-    (lambda (pgm) (eval-program  pgm)) 
-    (sllgen:make-stream-parser 
-      scanner-spec-interpretador-proyecto
-      gramatica-interpretador-proyecto)))
-
-
-;*******************************************************************************************
-;                                   El Interprete
-;******************************************************************************************
-;eval-program: <programa> -> numero
-; función que evalúa un programa teniendo en cuenta un ambiente dado (se inicializa dentro del programa)
-
-(define eval-program
-  (lambda (pgm)
-    (cases program pgm
-      (a-program (glob exp)
-                 (eval-expression exp(init-env))))))
-;**********************************************************************************************
-;                                              Ambiente inicial
-;**********************************************************************************************
-(define init-env
-    (lambda ()
- (empty-env)))
-
-;eval-expression: <expression> <enviroment> -> numero
-; evalua la expresión en el ambiente de entrada
-(define eval-expression
-  (lambda (exp env)
-      (cases expression exp
-   ; tipos de datos     
-       (entero-lit (num) num)
-        (symbol (letra) letra)
-        (caracter-lit (caracter) caracter)
-        (cadena-lit (cadena) cadena)
-        (flotante-lit (float) float)
-        (octal-lit (oct) oct)
-        (id-lit (id) (apply-env env id))
-       (id-ref (id-ref) id-ref)
-       (var-exp (ids exps body) exps)
-       (cons-exp (ids exps body) ids)
-       (rec-exp (proc-names idss bodies letrec-body))
-       (unic-exp (ids exps  body)  ids)      
-
-      ;;;;;; Constructores ;;;;;;
-      (lista-exp (exps) exps env)
-      (vector-exp (exps) exps env)
-      (reg-exp (id exp ids exps) id exp ids exps)
-      (exp-bool-exp (exp)exp)
-
-     ;;;;;; Estructuras de control ;;;;;;
-
-      (seq-exp (exp exps)
-                 (let loop ((acc (eval-expression exp env))
-                            (exps exps))
-                   (if (null? exps) acc
-                       (loop (eval-expression (car exps) env) (cdr exps)))))
-      (if-exp (exp-bool true-exp false-exp)
-              (if (eqv? (apply-exp-bool exp-bool env) 'true)
-                  (eval-expression true-exp env)
-                  (eval-expression false-exp env)))
-      (while-exp (exp-bool exp) (while exp-bool exp env))
-      (for-exp (id var exp-for exp1 exp2) (for id var exp-for exp1 exp2 env 'null))
-
-        ))
-      
-    
