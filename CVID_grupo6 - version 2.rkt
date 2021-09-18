@@ -318,10 +318,11 @@
       (id-lit (id) (apply-env env id))
       
    ;; (octal-lit (oct) oct)
-   ;; (id-ref (id-ref) id-ref)
-      
-   ;; (var-exp (ids exps body) exps)
-   ;; (cons-exp (ids exps body) ids)
+    (id-ref (id-ref) id-ref) 
+    (var-exp (ids exps body) exps)
+      (let ((args (eval-rands exps env)))
+                 (eval-expression body (extend-env ids args env))))
+      (cons-exp (ids exps body) ids)
    ;; (rec-exp (proc-names idss bodies letrec-body)  idss)
    ;; (unic-exp (ids exps  body)  ids)      
 
@@ -358,7 +359,7 @@
       (else exp)
       )))
 
-;; Cuenta los elemtos en una lista
+;; Cuenta los elementos en una lista
 (define contar-lista
   (lambda (l)
     (if (null? l)
@@ -403,6 +404,8 @@
       (primitiva-div () (/ exp1 exp2))
       (primitiva-residuo () (remainder exp1 exp2)))))
 
+; Función que aplica eval-expression a cada elemento de una 
+; lista de operandos (expresiones)
 (define eval-rands
   (lambda (rands env)
     (map (lambda (x) (eval-rand x env)) rands)))
