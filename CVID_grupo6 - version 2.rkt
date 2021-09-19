@@ -318,6 +318,7 @@
       (id-lit (id) (apply-env env id))
       
    ;; (octal-lit (oct) oct)
+    (c_vid_val-lit (cVid) cVid)
     (id-ref (id-ref) id-ref) 
     (var-exp (ids exps body) exps)
       (let ((args (eval-rands exps env)))
