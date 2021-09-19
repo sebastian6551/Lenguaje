@@ -323,7 +323,7 @@
     (id-ref (id-ref) id-ref) 
     (var-exp (ids exps body) exps)
       (let ((args (eval-rands exps env)))
-                 (eval-expression body (extend-env ids args env))))
+                 (eval-expresiones body (extend-env ids args env))))
      (cons-exp (ids exps body) ids)
    ;; (rec-exp (proc-names idss bodies letrec-body)  idss)
    ;; (unic-exp (ids exps  body)  ids)      
