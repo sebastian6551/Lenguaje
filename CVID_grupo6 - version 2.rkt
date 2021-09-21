@@ -387,6 +387,14 @@
             (iota len) idss bodies)
           env)))))
 
+;Funcion Iota
+(define iota
+  (lambda (end)
+    (let loop ((next 0))
+      (if (>= next end) '()
+        (cons next (loop (+ 1 next)))))))
+        
+        
 ;; Cuenta los elementos en una lista
 (define contar-lista
   (lambda (l)
