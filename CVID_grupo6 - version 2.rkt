@@ -241,7 +241,7 @@
    (expresion-bool (oper-bin-bool "(" expresion-bool ")" "(" expresion-bool ")") evalprim-booleano-bin-exp)
    (expresion-bool ("true") booleano-lit-true)
    (expresion-bool ("false") booleano-lit-false)
-   (expresion-bool (oper-un-bool expresion-bool) evalprim-booleano-un-exp)
+  (expresion-bool (oper-un-bool "(" expresion-bool ")") evalprim-booleano-un-exp)
                     
    (pred-prim ("<") menor-que)
    (pred-prim (">") mayor-que)
@@ -352,11 +352,93 @@
     ;;               (if (null? exps)
     ;;                   acc
     ;;                   (loop (eval-expresiones (car exps) env) (cdr exps)))))
-    ;; (while-exp (exp-bool exp) (apply-while exp-bool exp env))
-    ;;  (for-exp (id var exp-for exp1 exp2) (for id var exp-for exp1 exp2 env 'null))
+    
+    (if-exp (bool-exp true-exp false-exp)
+             (if (apply-exp-bool bool-exp env)
+               (eval-expresiones true-exp env)
+               (eval-expresiones false-exp env)))
+
+      (cond-exp (conds express eelse)          
+                (auxiliar-cond conds express eelse env ))
+
+      (while-exp (bool-exp exp)
+                 (auxiliar-while bool-exp exp env))
+      (for-exp (id exp1 conteo-exp exp2 exp3)
+               (auxiliar-for id exp1 conteo-exp exp2 exp3 env))
+               
+
+      (exp-bool-exp (bool-ex)(apply-exp-bool bool-ex env))
+    
+      (print-exp (exp)(eval-expresiones exp))
 
       (else exp)
       )))
+
+
+;----------------------
+;Funcion auxiliar cond 
+(define auxiliar-cond
+  (lambda (conds express eelse env)
+    (if (null? conds)
+        (eval-expresiones eelse env)
+        (if (eval-expresiones (car conds) env)
+            (eval-expresiones (car express) env)
+            (auxiliar-cond (cdr conds)(cdr express) eelse env)
+            )
+        )
+    )
+  )
+  
+  
+  ;apply-exp-bool estructuras booleanas   
+(define apply-exp-bool
+ (lambda (exp-b env)
+   (cases expresion-bool exp-b
+     (compare-booleano-exp (exp1 pred-prim exp2)
+                          (let ((args (eval-rands (list exp1 exp2) env)))
+                             (apply-pred-prim pred-prim args)))
+                           
+     (evalprim-booleano-bin-exp (oper-bin exp-b1 exp-b2)
+                                (let ((args (list (apply-exp-bool exp-b1 env)(apply-exp-bool exp-b2 env))))
+                                  (apply-oper-bin-bool oper-bin args)))
+
+     (booleano-lit-true ()#t)
+
+     (booleano-lit-false ()#f)
+     
+     (evalprim-booleano-un-exp (oper-un exp-b1)
+                                (let ((arg (apply-exp-bool exp-b1 env)))
+                                      (apply-un-bool oper-un arg)))
+     )))
+     
+ ;; apply-oper-bin-bool
+(define apply-oper-bin-bool
+ (lambda (oper-bin args)
+   (cases oper-bin-bool oper-bin
+     (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
+     (or-oper-bin ()(if (or (car args) (cadr args)) #t #f))
+     (xor-oper-bin ()(if (equal? (car args) (cadr args)) #f #t))
+     )))
+
+;;apply-oper-un-bool
+(define apply-un-bool
+     (lambda (oper-un-b arg)
+       (cases oper-un-bool oper-un-b
+         (not-oper-un ()(if arg #f #t))
+         )))
+;;apply-expresion-conteo 
+(define apply-expresion-conteo
+     (lambda (exp-conteo)
+       (cases expresion-conteo exp-conteo
+         (to-exp()0)
+         (downto-exp()0)
+         )))
+     
+
+;----------------------
+      
+      
+      
 
 ;; Cuenta los elemtos en una lista
 (define contar-lista
@@ -453,14 +535,7 @@
      (diferente ()(if  (not( = (car args) (cadr args) )) #t #f);revisar
      ))))
 
-;; apply-oper-bin-bool
-(define apply-oper-bin-bool
- (lambda (oper-bin args)
-   (cases oper-bin-bool oper-bin
-     (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
-     (or-oper-bin ()(if (or (car args) (cadr args)) #t #f))
-     (xor-oper-bin ()(if (and (car args) (cadr args)) #t #f));revisar
-     )))
+
 
 ;; Ambiente
 (define-datatype environment environment?
