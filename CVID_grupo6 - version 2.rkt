@@ -318,19 +318,33 @@
       (id-lit (id) (apply-env env id))
 ;****************************************Nuevo*************************************************
 ;**********************************************************************************************
-   ;; (octal-lit (oct) oct)
+     (octal-lit (oct)
+                   (oct-exp-unparse oct env))       
     (c_vid_val-lit (cVid) (apply-env env cVid))
     (id-ref (id-ref) id-ref) 
     (var-exp (ids exps body) exps)
       (let ((args (eval-rands exps env)))
                  (eval-expresiones body (extend-env ids args env))))
      (cons-exp (ids exps body) ids)
-   ;; (rec-exp (proc-names idss bodies letrec-body)  idss)
+     (rec-exp (proc-names idss bodies letrec-body)
+               (eval-expression letrec-body
+                                (extend-env-recursive proc-names idss bodies env)))
    ;; (unic-exp (ids exps  body)  ids)      
 
+;; oct-exp-unparse: extrae la lista de una expresion octal
+(define oct-exp-unparse
+  (lambda (oct env)
+    (eval-rand env)))
 
+;; oct-parse: convierte un número en base 10 a base N
+(define oct-parse
+  (lambda (num N)
+    (if(eqv? num 0) '()
+       (cons (modulo num N) (oct-parse (quotient num N) N)))))
+       
+       
+       
    ;; Constructores ;;;;;;
-      
    ;; (lista-exp (exps) exps env)
    ;; (vector-exp (exps) exps env)
    ;; (reg-exp (id exp ids exps) id exp ids exps)
@@ -360,6 +374,18 @@
 
       (else exp)
       )))
+      
+      ;; Funcion 
+  (define extend-env-recursive
+  (lambda (proc-names idss bodies old-env)
+    (let ((len (length proc-names)))
+      (let ((vec (make-vector len)))
+        (let ((env (extended-env-record proc-names vec old-env)))
+          (for-each
+            (lambda (pos ids body)
+              (vector-set! vec pos (closure ids body env)))
+            (iota len) idss bodies)
+          env)))))
 
 ;; Cuenta los elementos en una lista
 (define contar-lista
