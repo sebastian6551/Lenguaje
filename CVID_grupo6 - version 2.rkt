@@ -241,7 +241,7 @@
    (expresion-bool (oper-bin-bool "(" expresion-bool ")" "(" expresion-bool ")") evalprim-booleano-bin-exp)
    (expresion-bool ("true") booleano-lit-true)
    (expresion-bool ("false") booleano-lit-false)
-   (expresion-bool (oper-un-bool expresion-bool) evalprim-booleano-un-exp)
+   (expresion-bool (oper-un-bool "(" expresion-bool ")") evalprim-booleano-un-exp)
                     
    (pred-prim ("<") menor-que)
    (pred-prim (">") mayor-que)
@@ -292,6 +292,13 @@
                  (eval-globales globals (global-env))
                  (eval-expresiones exps (empty-env))))))
 
+(define init-env
+  (lambda ()
+    (extend-env-for-asign
+     '(x y)
+     (list 4 3)
+     (empty-env-rec))))
+
 ;; Evalua las globales
 (define eval-globales
   (lambda (glo env)
@@ -316,35 +323,29 @@
       (flotante-lit (flot) flot)
       (cadena-lit (cadena) cadena)
       (id-lit (id) (apply-env env id))
-;****************************************Nuevo*************************************************
-;**********************************************************************************************
-     (octal-lit (oct)
-                   (oct-exp-unparse oct env))       
-    (c_vid_val-lit (cVid) (apply-env env cVid))
-    (id-ref (id-ref) id-ref) 
-    (var-exp (ids exps body) exps)
-      (let ((args (eval-rands exps env)))
+
+      (octal-lit (oct)
+                 (oct-exp-unparse oct env))
+      
+      (c_vid_val-lit () "C-VID-VAL")
+
+      (id-ref (id-ref) id-ref)
+      
+      (var-exp (ids exps body)
+               (let ((args (eval-rands exps env)))
                  (eval-expresiones body (extend-env ids args env))))
-     (cons-exp (ids exps body) ids)
-     (rec-exp (proc-names idss bodies letrec-body)
-               (eval-expression letrec-body
+      
+      (cons-exp (ids exps body) ids)
+      
+      (rec-exp (proc-names idss bodies letrec-body)
+               (eval-expresiones letrec-body
                                 (extend-env-recursive proc-names idss bodies env)))
+      
    ;; (unic-exp (ids exps  body)  ids)      
 
-;; oct-exp-unparse: extrae la lista de una expresion octal
-(define oct-exp-unparse
-  (lambda (oct env)
-    (eval-rand env)))
 
-;; oct-parse: convierte un número en base 10 a base N
-(define oct-parse
-  (lambda (num N)
-    (if(eqv? num 0) '()
-       (cons (modulo num N) (oct-parse (quotient num N) N)))))
-       
-       
-       
    ;; Constructores ;;;;;;
+      
    ;; (lista-exp (exps) exps env)
    ;; (vector-exp (exps) exps env)
    ;; (reg-exp (id exp ids exps) id exp ids exps)
@@ -363,45 +364,90 @@
                           (apply-procedimiento proc args)
                           (eopl:error 'eval-expresiones "Intenta aplicar algo que no es un procedimiento: ~s" proc))))
       
+      ;;(definir-proc-rec (proc-names idss bodies letrec-body)
+      ;;            (eval-expresiones letrec-body
+      ;;                             (extend-env-recursively proc-names idss bodies env)))
+      
+      ;; Procedimientos recursivos
+      
+      ;; (expresion ( "invoca" expresion "(" (separated-list expresion ",") ")") invocar-proc)
+      ;; (expresion ( "funcion!" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc-rec)
+
+     ;; Asignación de variables
+      (modificar-exp (id exp)
+                     (begin (setref! (apply-env-ref env id) (eval-expresiones exp env)) 1))
+      
+    ;; (expresion ("->" identificador "=" expresion) modificar-exp)
+      
     ;;  Estructuras de control
+      
     ;;  (seq-exp (exp exps)
     ;;           (let loop ((acc (eval-expresiones exp env)) (exps exps))
     ;;               (if (null? exps)
     ;;                   acc
     ;;                   (loop (eval-expresiones (car exps) env) (cdr exps)))))
-    ;; (while-exp (exp-bool exp) (apply-while exp-bool exp env))
-    ;;  (for-exp (id var exp-for exp1 exp2) (for id var exp-for exp1 exp2 env 'null))
+      
+      (if-exp (bool-exp true-exp false-exp)
+             (if (apply-exp-bool bool-exp env)
+               (eval-expresiones true-exp env)
+               (eval-expresiones false-exp env)))
+      
+      (cond-exp (conds express eelse)          
+                (auxiliar-cond conds express eelse env ))
+      
+     ;; (while-exp (bool-exp exp)
+     ;;            (auxiliar-while bool-exp exp env))
+      
+     ;; (for-exp (id exp1 conteo-exp exp2 exp3)
+     ;;          (auxiliar-for id exp1 conteo-exp exp2 exp3 env))
 
+
+      (exp-bool-exp (bool-ex)(apply-exp-bool bool-ex env))
+
+      (print-exp (exp)(eval-expresiones exp env))
+      
       (else exp)
       )))
-      
-      ;; Funcion 
-  (define extend-env-recursive
+
+;;___________________________________________________________________________
+
+;; oct-exp-unparse: extrae la lista de una expresion octal
+(define oct-exp-unparse
+  (lambda (oct env)
+    (eval-rands (make-struct-octal oct) env)))
+
+(define make-struct-octal
+  (lambda (rands)
+    (map (lambda (x) (entero-lit x)) rands)))
+
+;;___________________________________________________________________________
+
+;; oct-parse: convierte un número en base 10 a base N
+(define oct-parse
+  (lambda (num N)
+    (if(eqv? num 0) '()
+       (cons (modulo num N) (oct-parse (quotient num N) N)))))
+
+;; Funcion 
+(define extend-env-recursive
   (lambda (proc-names idss bodies old-env)
     (let ((len (length proc-names)))
       (let ((vec (make-vector len)))
-        (let ((env (extended-env-record proc-names vec old-env)))
+        (let ((env (recursively-extended-env-record proc-names vec old-env)))
           (for-each
             (lambda (pos ids body)
               (vector-set! vec pos (closure ids body env)))
             (iota len) idss bodies)
           env)))))
 
-;Funcion Iota
+;; Funcion Iota
 (define iota
   (lambda (end)
     (let loop ((next 0))
       (if (>= next end) '()
         (cons next (loop (+ 1 next)))))))
-        
-        
-;; Cuenta los elementos en una lista
-(define contar-lista
-  (lambda (l)
-    (if (null? l)
-        0
-        (+ 1 (contar-lista (cdr l)))
-    )))
+
+;;___________________________________________________________________________
 
 ;; Buscar un símbolo en un ambiente
 (define apply-env
@@ -412,9 +458,30 @@
                            (let ((pos (list-find-position sym syms)))
                              (if (number? pos)
                                  (list-ref vals pos)
-                                 (apply-env env sym)))))))
+                                 (apply-env env sym))))
+
+      (recursively-extended-env-record (proc-names idss bodies old-env)
+                                       (let ((pos (list-find-position sym proc-names)))
+                                         (if (number? pos)
+                                             (closure (list-ref idss pos)
+                                                      (list-ref bodies pos)
+                                                      env)
+                                             (apply-env old-env sym)))))
+    ))
 
 ;; Funciones auxiliares para encontrar la posición de un símbolo
+
+;; Cuenta los elementos en una lista
+(define contar-lista
+  (lambda (l)
+    (if (null? l)
+        0
+        (+ 1 (contar-lista (cdr l)))
+    )))
+
+(define rib-find-position 
+  (lambda (sym los)
+    (list-find-position sym los)))
 
 (define list-find-position
   (lambda (sym los)
@@ -440,8 +507,7 @@
       (primitiva-div () (/ exp1 exp2))
       (primitiva-residuo () (remainder exp1 exp2)))))
 
-; Función que aplica eval-expression a cada elemento de una 
-; lista de operandos (expresiones)
+;; Evalua operadores en una operación
 (define eval-rands
   (lambda (rands env)
     (map (lambda (x) (eval-rand x env)) rands)))
@@ -480,6 +546,42 @@
                    (eopl:error 'apply-procedimiento "El número de argumentos esperado no coincide con el número dado: ~s" (contar-lista args))
                    )))))
 
+;;___________________________________________________________________________
+
+;; Asinar variables
+;; Referencias al vector (Store)
+(define-datatype reference reference?
+  (a-ref (position integer?)
+         (vec vector?)))
+
+;; aply-env-ref
+(define apply-env-ref
+  (lambda (env id)
+    (cases environmentSet env
+      (empty-env-rec ()
+                        (eopl:error 'apply-env-ref "No se puede enlazar: ~s" id))
+      (extended-env-rec (ids vals env)
+                           (let ((pos (rib-find-position id ids)))
+                             (if (number? pos)
+                                 (a-ref pos vals)
+                                 (apply-env-ref env id))))
+      (else 1)
+      )))
+
+;; Aux
+(define setref!
+  (lambda (ref val)
+    (primitive-setref! ref val)))
+
+(define primitive-setref!
+  (lambda (ref val)
+    (cases reference ref
+      (a-ref (pos vec)
+             (vector-set! vec pos val)))))
+
+;;___________________________________________________________________________
+
+;; Estructuras de control
 ;; apply-pred-prim condicionales
 (define apply-pred-prim
  (lambda (pred-pr args)
@@ -492,22 +594,78 @@
      (diferente ()(if  (not( = (car args) (cadr args) )) #t #f);revisar
      ))))
 
-;; apply-oper-bin-bool
+;Funcion auxiliar cond 
+(define auxiliar-cond
+  (lambda (conds express eelse env)
+    (if (null? conds)
+        (eval-expresiones eelse env)
+        (if (eval-expresiones (car conds) env)
+            (eval-expresiones (car express) env)
+            (auxiliar-cond (cdr conds)(cdr express) eelse env)
+            )
+        )
+    )
+  )
+
+;;apply-exp-bool estructuras booleanas   
+(define apply-exp-bool
+ (lambda (exp-b env)
+   (cases expresion-bool exp-b
+     (compare-booleano-exp (exp1 pred-prim exp2)
+                          (let ((args (eval-rands (list exp1 exp2) env)))
+                             (apply-pred-prim pred-prim args)))
+
+     (evalprim-booleano-bin-exp (oper-bin exp-b1 exp-b2)
+                                (let ((args (list (apply-exp-bool exp-b1 env)(apply-exp-bool exp-b2 env))))
+                                  (apply-oper-bin-bool oper-bin args)))
+
+     (booleano-lit-true ()#t)
+
+     (booleano-lit-false ()#f)
+
+     (evalprim-booleano-un-exp (oper-un exp-b1)
+                                (let ((arg (apply-exp-bool exp-b1 env)))
+                                      (apply-un-bool oper-un arg)))
+     )))
+
+ ;; apply-oper-bin-bool
 (define apply-oper-bin-bool
  (lambda (oper-bin args)
    (cases oper-bin-bool oper-bin
      (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
      (or-oper-bin ()(if (or (car args) (cadr args)) #t #f))
-     (xor-oper-bin ()(if (and (car args) (cadr args)) #t #f));revisar
+     (xor-oper-bin ()(if (equal? (car args) (cadr args)) #f #t))
      )))
 
-;; Ambiente
+;;apply-oper-un-bool
+(define apply-un-bool
+     (lambda (oper-un-b arg)
+       (cases oper-un-bool oper-un-b
+         (not-oper-un ()(if arg #f #t))
+         )))
+
+;;apply-expresion-conteo 
+(define apply-expresion-conteo
+     (lambda (exp-conteo)
+       (cases expresion-conteo exp-conteo
+         (to-exp()0)
+         (downto-exp()0)
+         )))
+
+;;___________________________________________________________________________
+
+;; Ambiente inmutable
 (define-datatype environment environment?
   (empty-env-record)
-  (extended-env-record
-   (syms (list-of symbol?))
-   (vals (list-of scheme-value?))
-   (env environment?)))
+  
+  (extended-env-record (syms (list-of symbol?))
+                       (vals (list-of scheme-value?))
+                       (env environment?))
+  
+  (recursively-extended-env-record (proc-names (list-of symbol?))
+                                   (idss (list-of (list-of symbol?)))
+                                   (bodies (list-of expresion?))
+                                   (env environment?)))
 
 (define scheme-value? (lambda (v) #t))
 
@@ -519,7 +677,22 @@
 ;; Ambiente extendido:
 (define extend-env
   (lambda (syms vals env)
-    (extended-env-record syms vals env))) 
+    (extended-env-record syms vals env)))
+
+;;___________________________________________________________________________
+
+;;Ambiente para asignación, variables mutables. Usa vectores
+
+(define-datatype environmentSet environmentSet?
+  (empty-env-rec)
+  (extended-env-rec
+   (syms (list-of symbol?))
+   (vec vector?)
+   (env environmentSet?)))
+
+(define extend-env-for-asign
+  (lambda (syms vals env)
+    (extended-env-rec syms (list->vector vals) env))) 
 
 ;;Ejemplos
 
@@ -591,6 +764,15 @@ cons x = 8,  z = 2 in 4")
 (scan&parse "
 global (a=5, b =6)
 rec f(y) {12} in 'a'")
+
+ (scan&parse "
+global ()
+rec
+    funcionX (d, e, f) {2}
+    funcionY (a) {5}
+    proce (g,h) {(h + g)}
+in
+    invoca proce(3,2)")
 
 ;; Ejemplo Unic
 (scan&parse "
