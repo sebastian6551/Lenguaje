@@ -365,13 +365,6 @@
 
       ;; Asignación de variables
      ;; (modificar-exp (id exp) (setref! (apply-env-set env id) (eval-expresiones exp env)))
-      (reg-exp (id exp ids exps)
-                     (let ((once-eval (apply-env env id)))
-                     (if (expresion-unic? once-eval)
-                         (if (eqv? (re-apply-env env id) "C-VID-VAL")
-                             (setref! (apply-env-set env id) (eval-expresiones exp env))
-                         (eopl:error 'modificar-exp "No es una variable mutable ~s" id))
-                         (setref! (apply-env-set env id) (eval-expresiones exp env)))))
 
       (modificar-exp (id exp)
                (let ((once-eval (apply-env env id)))
@@ -428,7 +421,7 @@
       (cases expresion-unic id-evaluado
         (exp-unic (expre)
                   (cases environment env
-                   (empty-env-record () (eval-expresiones expre (empty-env)))
+                   (empty-env-record () (eval-expresiones expre env))
                    (extended-env-record (syms vec amb) (eval-expresiones expre amb))))
         (c_vid_val-lit () "C-VID-VAL"))]
 
@@ -436,7 +429,7 @@
       (cases expresion-var id-evaluado
         (exp-var (expre)
                  (cases environment env
-                   (empty-env-record () (eval-expresiones expre (empty-env)))
+                   (empty-env-record () (eval-expresiones expre env))
                    (extended-env-record (syms vec amb) (eval-expresiones expre amb)))))]
 
      [else id-evaluado]))))
