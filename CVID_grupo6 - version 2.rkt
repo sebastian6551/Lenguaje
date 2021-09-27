@@ -134,135 +134,135 @@
 
 (define lexica
   '(
-     (epacio (whitespace) skip)
-     (comentario ("//" (arbno (not #\newline)) ) skip)
-     (identificador  (letter (arbno (or letter digit))) symbol)
-     (entero (digit (arbno digit)) number)
-     (entero ("-" digit (arbno digit)) number)
-     (flotante (digit (arbno digit) "." digit (arbno digit)) number)
-     (flotante ("-" digit (arbno digit) "." digit (arbno digit)) number)
-     (caracter ("'" letter "'") symbol)
-     (cadena ("\"" (arbno (or letter whitespace)) "\"")  symbol)
+    (epacio (whitespace) skip)
+    (comentario ("//" (arbno (not #\newline)) ) skip)
+    (identificador  (letter (arbno (or letter digit))) symbol)
+    (entero (digit (arbno digit)) number)
+    (entero ("-" digit (arbno digit)) number)
+    (flotante (digit (arbno digit) "." digit (arbno digit)) number)
+    (flotante ("-" digit (arbno digit) "." digit (arbno digit)) number)
+    (caracter ("'" letter "'") symbol)
+    (cadena ("\"" (arbno (or letter whitespace)) "\"")  symbol)
     )
   )
 
 (define gramatica
 
-'(
-   (programa (globales expresion) un-programa)
+  '(
+    (programa (globales expresion) un-programa)
 
-   (globales ("global" "(" (separated-list identificador "=" expresion ",") ")") global)
-   (expresion (cadena) cadena-lit)
-   (expresion (caracter) caracter-lit)
-   (expresion (entero) entero-lit)
-   (expresion (flotante) flotante-lit)
-   (expresion ("x8" "(" (arbno entero) ")") octal-lit)
-   (expresion (identificador) id-lit)
-   (expresion ("&" identificador) id-ref)
+    (globales ("global" "(" (separated-list identificador "=" expresion ",") ")") global)
+    (expresion (cadena) cadena-lit)
+    (expresion (caracter) caracter-lit)
+    (expresion (entero) entero-lit)
+    (expresion (flotante) flotante-lit)
+    (expresion ("x8" "(" (arbno entero) ")") octal-lit)
+    (expresion (identificador) id-lit)
+    (expresion ("&" identificador) id-ref)
 
-   ;; Cambio
-   (expresion ("C-VID-VAL") c_vid_val-lit)
+    ;; Cambio
+    (expresion ("C-VID-VAL") c_vid_val-lit)
 
-   (expresion ("var" (separated-list identificador "=" expresion ",") "in" expresion) var-exp)
-   (expresion ("cons" (separated-list identificador "=" expresion ",") "in" expresion) cons-exp)
-   (expresion ("rec" (arbno identificador "(" (separated-list identificador ",") ")" "{" expresion "}")  "in" expresion) rec-exp)
-   (expresion ("unic" (separated-list identificador "=" expresion ",") "in" expresion) unic-exp)
+    (expresion ("var" (separated-list identificador "=" expresion ",") "in" expresion) var-exp)
+    (expresion ("cons" (separated-list identificador "=" expresion ",") "in" expresion) cons-exp)
+    (expresion ("rec" (arbno identificador "(" (separated-list identificador ",") ")" "{" expresion "}")  "in" expresion) rec-exp)
+    (expresion ("unic" (separated-list identificador "=" expresion ",") "in" expresion) unic-exp)
    
-   (expresion ("[" (separated-list expresion ",")"]") lista-exp)
-   (expresion ("vector" "(" (separated-list expresion ",")")") vector-exp)
-   (expresion ("reg" "(" identificador "=" expresion "," (separated-list identificador "=" expresion ",") ")") reg-exp)
+    (expresion ("[" (separated-list expresion ",")"]") lista-exp)
+    (expresion ("vector" "(" (separated-list expresion ",")")") vector-exp)
+    (expresion ("reg" "(" identificador "=" expresion "," (separated-list identificador "=" expresion ",") ")") reg-exp)
    
-   (expresion ( "funcion" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc)
-   (expresion ( "invoca" expresion "(" (separated-list expresion ",") ")") invocar-proc)
-   (expresion ( "funcion!" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc-rec)
-   (expresion ("->" identificador "=" expresion) modificar-exp)
+    (expresion ( "funcion" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc)
+    (expresion ( "invoca" expresion "(" (separated-list expresion ",") ")") invocar-proc)
+    (expresion ( "funcion!" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc-rec)
+    (expresion ("->" identificador "=" expresion) modificar-exp)
    
-   (expresion (primitiva-unaria expresion) evalprim-un-exp)
-   (expresion ("(" expresion primitiva-binaria expresion ")") evalprim-bin-exp)
+    (expresion (primitiva-unaria expresion) evalprim-un-exp)
+    (expresion ("(" expresion primitiva-binaria expresion ")") evalprim-bin-exp)
    
-   (expresion ("octal" primitiva-octal-unaria expresion) evalprim-octal-un-exp)
-   (expresion ("octalbin" "(" expresion primitiva-octal-binaria expresion ")") evalprim-octal-bin-exp)
+    (expresion ("octal" primitiva-octal-unaria expresion) evalprim-octal-un-exp)
+    (expresion ("octalbin" "(" expresion primitiva-octal-binaria expresion ")") evalprim-octal-bin-exp)
 
-   ;;Primitivas
-   (primitiva-binaria ("+") primitiva-suma)
-   (primitiva-binaria ("¬") primitiva-resta)
-   (primitiva-binaria ("*") primitiva-mult)
-   (primitiva-binaria ("%") primitiva-residuo)
-   (primitiva-binaria ("/") primitiva-div)
-   (primitiva-unaria ("++") primitiva-incrementar)
-   (primitiva-unaria ("¬¬") primitiva-disminuir)
+    ;;Primitivas
+    (primitiva-binaria ("+") primitiva-suma)
+    (primitiva-binaria ("¬") primitiva-resta)
+    (primitiva-binaria ("*") primitiva-mult)
+    (primitiva-binaria ("%") primitiva-residuo)
+    (primitiva-binaria ("/") primitiva-div)
+    (primitiva-unaria ("++") primitiva-incrementar)
+    (primitiva-unaria ("¬¬") primitiva-disminuir)
 
-   ;;Para octales
-   (primitiva-octal-binaria ("+") primitiva-octal-suma)
-   (primitiva-octal-binaria ("¬") primitiva-octal-resta)
-   (primitiva-octal-binaria ("*") primitiva-octal-mult)
-   (primitiva-octal-unaria ("++") primitiva-octal-incrementar)
-   (primitiva-octal-unaria ("¬¬") primitiva-octal-disminuir)
+    ;;Para octales
+    (primitiva-octal-binaria ("+") primitiva-octal-suma)
+    (primitiva-octal-binaria ("¬") primitiva-octal-resta)
+    (primitiva-octal-binaria ("*") primitiva-octal-mult)
+    (primitiva-octal-unaria ("++") primitiva-octal-incrementar)
+    (primitiva-octal-unaria ("¬¬") primitiva-octal-disminuir)
    
-   ;;Para cadenas  
-   (cadena-primitive ("longitud-cadena") longitud-cadena)
-   (cadena-primitive ("concatenar") concatenar)
-   (expresion (cadena-primitive "(" (separated-list expresion ",")")") cadena-primapp-exp)
+    ;;Para cadenas  
+    (cadena-primitive ("longitud-cadena") longitud-cadena)
+    (cadena-primitive ("concatenar") concatenar)
+    (expresion (cadena-primitive "(" (separated-list expresion ",")")") cadena-primapp-exp)
    
-   ;;Para listas
-   (expresion ("vacio") vacio)
-   (lista-primitive ("vacio?") es-vacio)
-   (lista-primitive ("lista?") es-lista)
-   (lista-primitive ("cabeza") cabeza)
-   (lista-primitive ("cuerpo") cuerpo)
-   (lista-primitive-s ("crear-lista") crear-lista)
-   (lista-primitive-s ("append") append)
-   (expresion (lista-primitive "(" expresion ")") lista-primapp-exp)
-   (expresion (lista-primitive-s "(" (separated-list expresion ",")")") lista-primapp-exp-s)
+    ;;Para listas
+    (expresion ("vacio") vacio)
+    (lista-primitive ("vacio?") es-vacio)
+    (lista-primitive ("lista?") es-lista)
+    (lista-primitive ("cabeza") cabeza)
+    (lista-primitive ("cuerpo") cuerpo)
+    (lista-primitive-s ("crear-lista") crear-lista)
+    (lista-primitive-s ("append") append)
+    (expresion (lista-primitive "(" expresion ")") lista-primapp-exp)
+    (expresion (lista-primitive-s "(" (separated-list expresion ",")")") lista-primapp-exp-s)
    
-   ;;Para vectores
-   (expresion ("ref-vector" "(" entero ")" identificador) vector-ref)
-   (expresion ("vector?" "(" expresion ")") es-vector-exp)
-   (expresion ("crear-vector" "(" (separated-list expresion ",")")") crear-vector-exp)
+    ;;Para vectores
+    (expresion ("ref-vector" "(" entero ")" identificador) vector-reff)
+    (expresion ("vector?" "(" expresion ")") es-vector-exp)
+    (expresion ("crear-vector" "(" (separated-list expresion ",")")") crear-vector-exp)
    
-   ;; Cambio
-   (expresion ("vector-pos" identificador "(" entero ")" ) vector-pos-exp)
+    ;; Cambio
+    (expresion ("vector-pos" identificador "(" entero ")" ) vector-pos-exp)
    
-   ;; Modifica el elemento en la posicion n de un vector
-   (expresion ("set-vector" identificador "(" entero "," expresion ")") set-vector-exp)
+    ;; Modifica el elemento en la posicion n de un vector
+    (expresion ("set-vector" identificador "(" entero "," expresion ")") set-vector-exp)
    
-   ;;Para registros
-   (expresion ("registro?" "(" expresion ")") es-registro-exp)
-   (expresion ("ref-registro" identificador) registro-ref)
-   (expresion ("crear-registro" "(" (separated-list identificador "=" expresion ",") ")") crear-registro-exp)
+    ;;Para registros
+    (expresion ("registro?" "(" expresion ")") es-registro-exp)
+    (expresion ("ref-registro" identificador) registro-ref)
+    (expresion ("crear-registro" "(" (separated-list identificador "=" expresion ",") ")") crear-registro-exp)
 
-   ;; Cambio
-   (expresion ("registro-pos" identificador "(" entero ")" ) registro-pos-exp)
-   (expresion ("set-registro" identificador "(" entero "," expresion ")") set-registro-exp)
+    ;; Cambio
+    (expresion ("registro-pos" identificador "(" entero ")" ) registro-pos-exp)
+    (expresion ("set-registro" identificador "(" entero "," expresion ")") set-registro-exp)
 
-   ;;Para booleanos
-   (expresion (expresion-bool) exp-bool-exp)
-   (expresion-bool ("compare" expresion pred-prim expresion) compare-booleano-exp)
-   (expresion-bool (oper-bin-bool "(" expresion-bool ")" "(" expresion-bool ")") evalprim-booleano-bin-exp)
-   (expresion-bool ("true") booleano-lit-true)
-   (expresion-bool ("false") booleano-lit-false)
-   (expresion-bool (oper-un-bool "(" expresion-bool ")") evalprim-booleano-un-exp)
+    ;;Para booleanos
+    (expresion (expresion-bool) exp-bool-exp)
+    (expresion-bool ("compare" expresion pred-prim expresion) compare-booleano-exp)
+    (expresion-bool (oper-bin-bool "(" expresion-bool ")" "(" expresion-bool ")") evalprim-booleano-bin-exp)
+    (expresion-bool ("true") booleano-lit-true)
+    (expresion-bool ("false") booleano-lit-false)
+    (expresion-bool (oper-un-bool "(" expresion-bool ")") evalprim-booleano-un-exp)
                     
-   (pred-prim ("<") menor-que)
-   (pred-prim (">") mayor-que)
-   (pred-prim ("<=") menor-igual)
-   (pred-prim (">=") mayor-igual)
-   (pred-prim ("==") igual-igual)
-   (pred-prim ("<>") diferente)
-   (oper-bin-bool ("and") and-oper-bin)
-   (oper-bin-bool ("or") or-oper-bin)
-   (oper-bin-bool ("xor") xor-oper-bin)
-   (oper-un-bool ("not") not-oper-un)
+    (pred-prim ("<") menor-que)
+    (pred-prim (">") mayor-que)
+    (pred-prim ("<=") menor-igual)
+    (pred-prim (">=") mayor-igual)
+    (pred-prim ("==") igual-igual)
+    (pred-prim ("<>") diferente)
+    (oper-bin-bool ("and") and-oper-bin)
+    (oper-bin-bool ("or") or-oper-bin)
+    (oper-bin-bool ("xor") xor-oper-bin)
+    (oper-un-bool ("not") not-oper-un)
 
-   (expresion ("sequence" expresion ";" (arbno expresion ";" ) "end") seq-exp)
-   (expresion ("if" expresion-bool "then" expresion "else" expresion "end") if-exp) 
-   (expresion ("cond" (arbno  "[" "(" expresion ")" "(" expresion ")" "]"  ) "else" expresion) cond-exp)
-   (expresion ("while" "(" expresion-bool ")" "do"  expresion  "done") while-exp)
-   (expresion ("for" identificador "=" expresion expresion-conteo expresion "do" expresion  "done") for-exp )
-   (expresion-conteo ("to") to-exp)
-   (expresion-conteo ("downto") downto-exp)
-   (expresion ("print" "(" expresion ")" ) print-exp)
-   )
+    (expresion ("sequence" expresion ";" (arbno expresion ";" ) "end") seq-exp)
+    (expresion ("if" expresion-bool "then" expresion "else" expresion "end") if-exp) 
+    (expresion ("cond" (arbno  "[" "(" expresion ")" "(" expresion ")" "]"  ) "else" expresion) cond-exp)
+    (expresion ("while" "(" expresion-bool ")" "do"  expresion  "done") while-exp)
+    (expresion ("for" identificador "=" expresion expresion-conteo expresion "do" expresion  "done") for-exp )
+    (expresion-conteo ("to") to-exp)
+    (expresion-conteo ("downto") downto-exp)
+    (expresion ("print" "(" expresion ")" ) print-exp)
+    )
   )
 
 (sllgen:make-define-datatypes lexica gramatica)
@@ -279,38 +279,31 @@
 ;; Interpretador
 (define interpretador
   (sllgen:make-rep-loop  "> "
-    (lambda (prog) (eval-program  prog)) 
-    (sllgen:make-stream-parser 
-      lexica
-      gramatica)))
+                         (lambda (prog) (eval-program  prog)) 
+                         (sllgen:make-stream-parser 
+                          lexica
+                          gramatica)))
 
 ;; eval-program:
 (define eval-program
   (lambda (prog)
     (cases programa prog
       (un-programa (globals exps)
-                 (eval-globales globals (global-env))
-                 (eval-expresiones exps (empty-env))))))
+                   (eval-globales globals exps (global-env))))))
 
-(define init-env
-  (lambda ()
-    (extend-env-for-asign
-     '(x y)
-     (list 4 3)
-     (empty-env-rec))))
-
-;; Evalua las globales
+;; eval-globales: evalua las globales
 (define eval-globales
-  (lambda (glo env)
+  (lambda (glo exps env)
     (cases globales glo
-      (global (idss bodies) idss))
-    ;;De aquí se mandaría el cuerpo a eval-expresiones
-      ))
+      (global (idss bodies)
+              (let ((args (eval-rands bodies env)))
+                (eval-expresiones exps (extend-env idss args env))))
+      )))
 
 ;; Global-env: ambiente para las variables globales
 (define global-env  
   (lambda ()
-    (empty-env-record)))  
+    (empty-env)))  
 
 ;; Evalua las expresiones
 (define eval-expresiones
@@ -335,21 +328,22 @@
                (let ((args (eval-rands exps env)))
                  (eval-expresiones body (extend-env ids args env))))
       
-      (cons-exp (ids exps body) ids)
+      (cons-exp (ids exps body)
+                (let ((args (eval-rands exps env)))
+                  (eval-expresiones body (extend-env-cons ids args env))))
       
-      (rec-exp (proc-names idss bodies letrec-body)
-               (eval-expresiones letrec-body
-                                (extend-env-recursive proc-names idss bodies env)))
+      (rec-exp (proc-names idss bodies rec-body)
+               (eval-expresiones rec-body
+                                 (extend-env-recursive proc-names idss bodies env)))
       
-   ;; (unic-exp (ids exps  body)  ids)      
+      ;; (unic-exp (ids exps  body)  ids)      
 
 
-   ;; Constructores ;;;;;;
+      ;; Constructores ;;;;;;
       
-   ;; (lista-exp (exps) exps env)
-   ;; (vector-exp (exps) exps env)
-   ;; (reg-exp (id exp ids exps) id exp ids exps)
-   ;; (exp-bool-exp (exp) exp)
+      ;; (lista-exp (exps) exps env)
+      ;; (vector-exp (exps) exps env)
+      ;; (reg-exp (id exp ids exps) id exp ids exps)
 
       ;; Primitivas
       (evalprim-bin-exp (exp1 prim-bin exp2) (eval-prim exp1 prim-bin exp2 env))
@@ -357,6 +351,7 @@
 
       ;; Procedimientos
       (definir-proc (ids body)(closure ids body env))
+      
       (invocar-proc (rator rands)
                     (let ((proc (eval-expresiones rator env))
                           (args (eval-rands rands env)))
@@ -370,36 +365,31 @@
       
       ;; Procedimientos recursivos
       
-      ;; (expresion ( "invoca" expresion "(" (separated-list expresion ",") ")") invocar-proc)
       ;; (expresion ( "funcion!" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc-rec)
 
-     ;; Asignación de variables
-      (modificar-exp (id exp)
-                     (begin (setref! (apply-env-ref env id) (eval-expresiones exp env)) 1))
+      ;; Asignación de variables
+      (modificar-exp (id exp) (setref! (apply-env-set env id) (eval-expresiones exp env)))
       
-    ;; (expresion ("->" identificador "=" expresion) modificar-exp)
-      
-    ;;  Estructuras de control
-      
-    ;;  (seq-exp (exp exps)
-    ;;           (let loop ((acc (eval-expresiones exp env)) (exps exps))
-    ;;               (if (null? exps)
-    ;;                   acc
-    ;;                   (loop (eval-expresiones (car exps) env) (cdr exps)))))
+      ;;  Estructuras de control
+      (seq-exp (exp exps)
+               (let loop ((acc (eval-expresiones exp env)) (exps exps))
+                 (if (null? exps)
+                     acc
+                     (loop (eval-expresiones (car exps) env) (cdr exps)))))
       
       (if-exp (bool-exp true-exp false-exp)
-             (if (apply-exp-bool bool-exp env)
-               (eval-expresiones true-exp env)
-               (eval-expresiones false-exp env)))
+              (if (apply-exp-bool bool-exp env)
+                  (eval-expresiones true-exp env)
+                  (eval-expresiones false-exp env)))
       
       (cond-exp (conds express eelse)          
                 (auxiliar-cond conds express eelse env ))
       
-     ;; (while-exp (bool-exp exp)
-     ;;            (auxiliar-while bool-exp exp env))
+      ;; (while-exp (bool-exp exp)
+      ;;            (auxiliar-while bool-exp exp env))
       
-     ;; (for-exp (id exp1 conteo-exp exp2 exp3)
-     ;;          (auxiliar-for id exp1 conteo-exp exp2 exp3 env))
+      ;; (for-exp (id exp1 conteo-exp exp2 exp3)
+      ;;          (auxiliar-for id exp1 conteo-exp exp2 exp3 env))
 
 
       (exp-bool-exp (bool-ex)(apply-exp-bool bool-ex env))
@@ -409,6 +399,16 @@
       (else exp)
       )))
 
+;SARA----------------------------------------
+
+(define aux-modificar
+ (lambda (id exp env)
+   (cases expresion exp
+     (var-exp (ids exps body )0 )
+     (else "No es posible modificar")
+     )
+   )
+  )
 ;;___________________________________________________________________________
 
 ;; oct-exp-unparse: extrae la lista de una expresion octal
@@ -428,16 +428,16 @@
     (if(eqv? num 0) '()
        (cons (modulo num N) (oct-parse (quotient num N) N)))))
 
-;; Funcion 
+;; Ambiente extendido para funciones recursivas
 (define extend-env-recursive
   (lambda (proc-names idss bodies old-env)
     (let ((len (length proc-names)))
       (let ((vec (make-vector len)))
-        (let ((env (recursively-extended-env-record proc-names vec old-env)))
+        (let ((env (extended-env-record proc-names vec old-env)))
           (for-each
-            (lambda (pos ids body)
-              (vector-set! vec pos (closure ids body env)))
-            (iota len) idss bodies)
+           (lambda (pos ids body)
+             (vector-set! vec pos (closure ids body env)))
+           (iota len) idss bodies)
           env)))))
 
 ;; Funcion Iota
@@ -445,29 +445,50 @@
   (lambda (end)
     (let loop ((next 0))
       (if (>= next end) '()
-        (cons next (loop (+ 1 next)))))))
+          (cons next (loop (+ 1 next)))))))
 
 ;;___________________________________________________________________________
 
 ;; Buscar un símbolo en un ambiente
 (define apply-env
   (lambda (env sym)
-    (cases environment env
-      (empty-env-record () (eopl:error 'apply-env "No se puede enlazar: ~s" sym))
-      (extended-env-record (syms vals env)
-                           (let ((pos (list-find-position sym syms)))
-                             (if (number? pos)
-                                 (list-ref vals pos)
-                                 (apply-env env sym))))
+    (if (environment? env)
+        (deref (apply-env-ref env sym))
+        (cases environmentCons env
+          (empty-env-cons ()
+                          (eopl:error 'apply-env-ref "No se puede enlazar: ~s" sym))
+          (extended-env-cons (ids vals env)
+                             (let ((pos (rib-find-position sym ids)))
+                               (if (number? pos)
+                                   (deref (a-ref pos vals))
+                                   (apply-env-ref env sym))))))))
 
-      (recursively-extended-env-record (proc-names idss bodies old-env)
-                                       (let ((pos (list-find-position sym proc-names)))
-                                         (if (number? pos)
-                                             (closure (list-ref idss pos)
-                                                      (list-ref bodies pos)
-                                                      env)
-                                             (apply-env old-env sym)))))
-    ))
+;; aply-env-ref
+(define apply-env-ref
+  (lambda (env id)
+    (cases environment env
+      (empty-env-record ()
+                        (eopl:error 'apply-env-ref "No se puede enlazar: ~s" id))
+      (extended-env-record (ids vals env)
+                           (let ((pos (rib-find-position id ids)))
+                             (if (number? pos)
+                                 (a-ref pos vals)
+                                 (apply-env-ref env id))))
+      )))
+
+;; Apply-env para asignación de variables
+(define apply-env-set
+  (lambda (env id)
+    (if (environment? env)
+        (cases environment env
+          (empty-env-record ()
+                            (eopl:error 'apply-env-set "No se puede enlazar: ~s" id))
+          (extended-env-record (ids vals env)
+                               (let ((pos (rib-find-position id ids)))
+                                 (if (number? pos)
+                                     (a-ref pos vals)
+                                     (apply-env-set env id))))
+          ) (eopl:error 'apply-env-set "No es una variable mutable ~s" id))))
 
 ;; Funciones auxiliares para encontrar la posición de un símbolo
 
@@ -477,7 +498,7 @@
     (if (null? l)
         0
         (+ 1 (contar-lista (cdr l)))
-    )))
+        )))
 
 (define rib-find-position 
   (lambda (sym los)
@@ -494,8 +515,8 @@
       ((pred (car ls)) 0)
       (else (let ((list-index-r (list-index pred (cdr ls))))
               (if (number? list-index-r)
-                (+ list-index-r 1)
-                #f))))))
+                  (+ list-index-r 1)
+                  #f))))))
 
 ;; Evaluar primitivas binarias
 (define apply-primitiva-binaria
@@ -548,25 +569,21 @@
 
 ;;___________________________________________________________________________
 
-;; Asinar variables
 ;; Referencias al vector (Store)
 (define-datatype reference reference?
   (a-ref (position integer?)
          (vec vector?)))
 
-;; aply-env-ref
-(define apply-env-ref
-  (lambda (env id)
-    (cases environmentSet env
-      (empty-env-rec ()
-                        (eopl:error 'apply-env-ref "No se puede enlazar: ~s" id))
-      (extended-env-rec (ids vals env)
-                           (let ((pos (rib-find-position id ids)))
-                             (if (number? pos)
-                                 (a-ref pos vals)
-                                 (apply-env-ref env id))))
-      (else 1)
-      )))
+;; Desreferenciar 
+(define deref
+  (lambda (ref)
+    (primitive-deref ref)))
+
+(define primitive-deref
+  (lambda (ref)
+    (cases reference ref
+      (a-ref (pos vec)
+             (vector-ref vec pos)))))
 
 ;; Aux
 (define setref!
@@ -584,15 +601,15 @@
 ;; Estructuras de control
 ;; apply-pred-prim condicionales
 (define apply-pred-prim
- (lambda (pred-pr args)
-   (cases pred-prim pred-pr
-     (menor-que () (if (< (car args) (cadr args) ) #t #f))
-     (mayor-que () (if (> (car args) (cadr args) ) #t #f))
-     (menor-igual ()(if (<= (cadr args) ) #t #f))
-     (mayor-igual ()(if (>= (car args) (cadr args) ) #t #f))
-     (igual-igual ()(if (= (car args) (cadr args) ) #t #f))
-     (diferente ()(if  (not( = (car args) (cadr args) )) #t #f);revisar
-     ))))
+  (lambda (pred-pr args)
+    (cases pred-prim pred-pr
+      (menor-que () (if (< (car args) (cadr args) ) #t #f))
+      (mayor-que () (if (> (car args) (cadr args) ) #t #f))
+      (menor-igual ()(if (<= (cadr args) ) #t #f))
+      (mayor-igual ()(if (>= (car args) (cadr args) ) #t #f))
+      (igual-igual ()(if (= (car args) (cadr args) ) #t #f))
+      (diferente ()(if  (not( = (car args) (cadr args) )) #t #f);revisar
+                 ))))
 
 ;Funcion auxiliar cond 
 (define auxiliar-cond
@@ -609,90 +626,84 @@
 
 ;;apply-exp-bool estructuras booleanas   
 (define apply-exp-bool
- (lambda (exp-b env)
-   (cases expresion-bool exp-b
-     (compare-booleano-exp (exp1 pred-prim exp2)
-                          (let ((args (eval-rands (list exp1 exp2) env)))
-                             (apply-pred-prim pred-prim args)))
+  (lambda (exp-b env)
+    (cases expresion-bool exp-b
+      (compare-booleano-exp (exp1 pred-prim exp2)
+                            (let ((args (eval-rands (list exp1 exp2) env)))
+                              (apply-pred-prim pred-prim args)))
 
-     (evalprim-booleano-bin-exp (oper-bin exp-b1 exp-b2)
-                                (let ((args (list (apply-exp-bool exp-b1 env)(apply-exp-bool exp-b2 env))))
-                                  (apply-oper-bin-bool oper-bin args)))
+      (evalprim-booleano-bin-exp (oper-bin exp-b1 exp-b2)
+                                 (let ((args (list (apply-exp-bool exp-b1 env)(apply-exp-bool exp-b2 env))))
+                                   (apply-oper-bin-bool oper-bin args)))
 
-     (booleano-lit-true ()#t)
+      (booleano-lit-true ()#t)
 
-     (booleano-lit-false ()#f)
+      (booleano-lit-false ()#f)
 
-     (evalprim-booleano-un-exp (oper-un exp-b1)
+      (evalprim-booleano-un-exp (oper-un exp-b1)
                                 (let ((arg (apply-exp-bool exp-b1 env)))
-                                      (apply-un-bool oper-un arg)))
-     )))
+                                  (apply-un-bool oper-un arg)))
+      )))
 
- ;; apply-oper-bin-bool
+;; apply-oper-bin-bool
 (define apply-oper-bin-bool
- (lambda (oper-bin args)
-   (cases oper-bin-bool oper-bin
-     (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
-     (or-oper-bin ()(if (or (car args) (cadr args)) #t #f))
-     (xor-oper-bin ()(if (equal? (car args) (cadr args)) #f #t))
-     )))
+  (lambda (oper-bin args)
+    (cases oper-bin-bool oper-bin
+      (and-oper-bin () (if (and (car args) (cadr args)) #t #f))
+      (or-oper-bin ()(if (or (car args) (cadr args)) #t #f))
+      (xor-oper-bin ()(if (equal? (car args) (cadr args)) #f #t))
+      )))
 
 ;;apply-oper-un-bool
 (define apply-un-bool
-     (lambda (oper-un-b arg)
-       (cases oper-un-bool oper-un-b
-         (not-oper-un ()(if arg #f #t))
-         )))
+  (lambda (oper-un-b arg)
+    (cases oper-un-bool oper-un-b
+      (not-oper-un ()(if arg #f #t))
+      )))
 
 ;;apply-expresion-conteo 
 (define apply-expresion-conteo
-     (lambda (exp-conteo)
-       (cases expresion-conteo exp-conteo
-         (to-exp()0)
-         (downto-exp()0)
-         )))
+  (lambda (exp-conteo)
+    (cases expresion-conteo exp-conteo
+      (to-exp()0)
+      (downto-exp()0)
+      )))
 
 ;;___________________________________________________________________________
 
-;; Ambiente inmutable
+;; Ambiente unificado
 (define-datatype environment environment?
   (empty-env-record)
   
   (extended-env-record (syms (list-of symbol?))
-                       (vals (list-of scheme-value?))
-                       (env environment?))
-  
-  (recursively-extended-env-record (proc-names (list-of symbol?))
-                                   (idss (list-of (list-of symbol?)))
-                                   (bodies (list-of expresion?))
-                                   (env environment?)))
+                       (vec vector?)
+                       (env environment?)))
 
 (define scheme-value? (lambda (v) #t))
+
+;; Ambiente extendido:
+
+(define extend-env
+  (lambda (syms vals env)
+    (extended-env-record syms (list->vector vals) env)))
+
+;; Ambiente para cons
+(define-datatype environmentCons environmentCons?
+  (empty-env-cons)
+  
+  (extended-env-cons (syms (list-of symbol?))
+                     (vec vector?)
+                     (env environment?))
+  )
+
+(define extend-env-cons
+  (lambda (syms vals env)
+    (extended-env-cons syms (list->vector vals) env)))
 
 ;; Ambiente vacío:
 (define empty-env  
   (lambda ()
     (empty-env-record)))
-
-;; Ambiente extendido:
-(define extend-env
-  (lambda (syms vals env)
-    (extended-env-record syms vals env)))
-
-;;___________________________________________________________________________
-
-;;Ambiente para asignación, variables mutables. Usa vectores
-
-(define-datatype environmentSet environmentSet?
-  (empty-env-rec)
-  (extended-env-rec
-   (syms (list-of symbol?))
-   (vec vector?)
-   (env environmentSet?)))
-
-(define extend-env-for-asign
-  (lambda (syms vals env)
-    (extended-env-rec syms (list->vector vals) env))) 
 
 ;;Ejemplos
 
@@ -765,7 +776,7 @@ cons x = 8,  z = 2 in 4")
 global (a=5, b =6)
 rec f(y) {12} in 'a'")
 
- (scan&parse "
+(scan&parse "
 global ()
 rec
     funcionX (d, e, f) {2}
@@ -1010,3 +1021,16 @@ var factorial = funcion!(n){if compare n < 2
 in
 invoca factorial(5)
 ")
+
+;;Ejemplo Factorial con rec
+(scan&parse "
+global ()
+rec factorial (n){if compare n < 2
+                then 1
+                else (n * invoca factorial(¬¬ n)) end}
+in
+invoca factorial(5)
+")
+
+(interpretador)
+
