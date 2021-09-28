@@ -71,14 +71,8 @@
 ;;                      crear-vector-exp (exps)
 ;;                  ::= set-vector <identificador> = ({<expresion>}*(,))
 ;;                      set-vector-exp (id body)
-;;                  ::= registro? (<expresion>)
-;;                      es-registro-exp (exp)
-;;                  ::= ref-registro <identificador>
-;;                      registro-ref (id)
-;;                  ::= crear-registro({<identificador> = <expresion>}*(,))
-;;                      crear-registro-exp (ids body)
-;;                  ::= set-registro <identificador> = ({<identificador> = <expresion>}*(,))
-;;                      set-registro-exp (id ids body)
+;;                 <reg-primitive> (separated-list <expresion> ",")
+;;                               <reg-primapp-exp (exps)>
 ;;                  ::= <expresion-bool> 
 ;;                      exp-bool-exp (exp)
 ;;                  ::= sequence {<expresion> ;}+ end
@@ -142,7 +136,7 @@
     (flotante (digit (arbno digit) "." digit (arbno digit)) number)
     (flotante ("-" digit (arbno digit) "." digit (arbno digit)) number)
     (caracter ("'" letter "'") symbol)
-    (cadena ("\"" (arbno (or letter whitespace)) "\"")  symbol)
+    (cadena ("\"" (arbno (or letter whitespace digit)) "\"")  symbol)
     )
   )
 
@@ -160,13 +154,18 @@
     (expresion (identificador) id-lit)
     (expresion ("&" identificador) id-ref)
 
-    ;; Cambio
-    (expresion ("C-VID-VAL") c_vid_val-lit)
+    (expresion-unic ("C-VID-VAL") c_vid_val-lit)
+    (expresion-unic (expresion) exp-unic)
 
-    (expresion ("var" (separated-list identificador "=" expresion ",") "in" expresion) var-exp)
+    (expresion ("var" (separated-list identificador "=" expresion-var ",") "in" expresion) var-exp)
+    (expresion-var (expresion) exp-var)
+    
     (expresion ("cons" (separated-list identificador "=" expresion ",") "in" expresion) cons-exp)
+    
+    (expresion ("id-cons" identificador) cons-id)
+    
     (expresion ("rec" (arbno identificador "(" (separated-list identificador ",") ")" "{" expresion "}")  "in" expresion) rec-exp)
-    (expresion ("unic" (separated-list identificador "=" expresion ",") "in" expresion) unic-exp)
+    (expresion ("unic" (separated-list identificador "=" expresion-unic",") "in" expresion) unic-exp)
    
     (expresion ("[" (separated-list expresion ",")"]") lista-exp)
     (expresion ("vector" "(" (separated-list expresion ",")")") vector-exp)
@@ -227,9 +226,14 @@
     (expresion ("set-vector" identificador "(" entero "," expresion ")") set-vector-exp)
    
     ;;Para registros
-    (expresion ("registro?" "(" expresion ")") es-registro-exp)
-    (expresion ("ref-registro" identificador) registro-ref)
-    (expresion ("crear-registro" "(" (separated-list identificador "=" expresion ",") ")") crear-registro-exp)
+    (reg-primitive ("registro?")es-registro-exp)
+    (reg-primitive ("ref-registro") registro-ref)
+    (reg-primitive ("crear-registro")crear-registro-exp)
+    ;(reg-primitive ("set-reg") set-reg)
+    
+     ;;Operacion sobre primitiva
+     (expresion (reg-primitive "(" (separated-list expresion "," identificador  "," )")")
+              reg-primapp-exp)
 
     ;; Cambio
     (expresion ("registro-pos" identificador "(" entero ")" ) registro-pos-exp)
@@ -315,39 +319,45 @@
       (caracter-lit (caract) caract)
       (flotante-lit (flot) flot)
       (cadena-lit (cadena) cadena)
-      (id-lit (id) (apply-env env id))
+      (id-lit (id) (re-apply-env env id))
 
       (octal-lit (oct)
                  (oct-exp-unparse oct env))
-      
-      (c_vid_val-lit () "C-VID-VAL")
 
       (id-ref (id-ref) id-ref)
       
       (var-exp (ids exps body)
-               (let ((args (eval-rands exps env)))
+               (let ((args (eval-rands-definiciones exps env)))
                  (eval-expresiones body (extend-env ids args env))))
       
       (cons-exp (ids exps body)
                 (let ((args (eval-rands exps env)))
-                  (eval-expresiones body (extend-env-cons ids args env))))
+                  (eval-expresiones body (extend-env ids args env))))
       
       (rec-exp (proc-names idss bodies rec-body)
                (eval-expresiones rec-body
                                  (extend-env-recursive proc-names idss bodies env)))
       
-      ;; (unic-exp (ids exps  body)  ids)      
-
+      (unic-exp (ids exps body)
+                (let ((args (eval-rands-definiciones exps env)))
+                 (eval-expresiones body (extend-env ids args env))))      
 
       ;; Constructores ;;;;;;
+      (lista-exp (args) (car (list (eval-rands args env))))
+       (reg-exp (id exp ids exps) (reg-unparse id exp ids exps env))
       
-      ;; (lista-exp (exps) exps env)
       ;; (vector-exp (exps) exps env)
       ;; (reg-exp (id exp ids exps) id exp ids exps)
+      
+     
 
       ;; Primitivas
       (evalprim-bin-exp (exp1 prim-bin exp2) (eval-prim exp1 prim-bin exp2 env))
       (evalprim-un-exp (prim-un exp) (apply-primitiva-unaria prim-un (eval-rand exp env)))
+      
+      (reg-primapp-exp(prim exps ids)
+                       (let ((args (eval-rands exps env)))
+                                (apply-reg-primitive prim  args ids env)))
 
       ;; Procedimientos
       (definir-proc (ids body)(closure ids body env))
@@ -358,17 +368,26 @@
                       (if (procedimiento? proc)
                           (apply-procedimiento proc args)
                           (eopl:error 'eval-expresiones "Intenta aplicar algo que no es un procedimiento: ~s" proc))))
-      
-      ;;(definir-proc-rec (proc-names idss bodies letrec-body)
-      ;;            (eval-expresiones letrec-body
-      ;;                             (extend-env-recursively proc-names idss bodies env)))
-      
-      ;; Procedimientos recursivos
-      
-      ;; (expresion ( "funcion!" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc-rec)
 
       ;; Asignación de variables
-      (modificar-exp (id exp) (setref! (apply-env-set env id) (eval-expresiones exp env)))
+     ;; (modificar-exp (id exp) (setref! (apply-env-set env id) (eval-expresiones exp env)))
+
+      (modificar-exp (id exp)
+               (let ((once-eval (apply-env env id)))
+                 (cond
+                   
+                   ;;Para unic
+                   [(expresion-unic? once-eval)
+                    (if (eqv? (re-apply-env env id) "C-VID-VAL")
+                             (setref! (apply-env-set env id) (eval-expresiones exp env))
+                         (eopl:error 'modificar-exp "No es una variable mutable ~s" id))]
+
+                   ;;Para var
+                   [(expresion-var? once-eval) (setref! (apply-env-set env id) (eval-expresiones exp env))]
+
+                   ;;Para todo lo demás
+                   [else (eopl:error 'modificar-exp "No es una variable mutable ~s" id)])))
+      
       
       ;;  Estructuras de control
       (seq-exp (exp exps)
@@ -399,16 +418,30 @@
       (else exp)
       )))
 
-;SARA----------------------------------------
 
-(define aux-modificar
- (lambda (id exp env)
-   (cases expresion exp
-     (var-exp (ids exps body )0 )
-     (else "No es posible modificar")
-     )
-   )
-  )
+
+;; Determina si es necesario evaluar nuevamente el id o no
+(define re-apply-env
+  (lambda (env id)
+    (let ((id-evaluado (apply-env env id)))
+    (cond
+     [(expresion-unic? id-evaluado)
+      (cases expresion-unic id-evaluado
+        (exp-unic (expre)
+                  (cases environment env
+                   (empty-env-record () (eval-expresiones expre env))
+                   (extended-env-record (syms vec amb) (eval-expresiones expre amb))))
+        (c_vid_val-lit () "C-VID-VAL"))]
+
+     [(expresion-var? id-evaluado)
+      (cases expresion-var id-evaluado
+        (exp-var (expre)
+                 (cases environment env
+                   (empty-env-record () (eval-expresiones expre env))
+                   (extended-env-record (syms vec amb) (eval-expresiones expre amb)))))]
+
+     [else id-evaluado]))))
+
 ;;___________________________________________________________________________
 
 ;; oct-exp-unparse: extrae la lista de una expresion octal
@@ -428,7 +461,64 @@
     (if(eqv? num 0) '()
        (cons (modulo num N) (oct-parse (quotient num N) N)))))
 
-;; Ambiente extendido para funciones recursivas
+
+;; Funcion AUX sobre primitivas
+;; reg-unparse:
+(define reg-unparse
+  (lambda (id exp ids exps env)
+    (cons (list id (eval-rand exp env)) (map (lambda (id exp) (list id (eval-rand exp env))) ids exps))))
+
+
+;; apply-reg-primitive:
+(define apply-reg-primitive
+  (lambda (prim args ids env)
+    (cases reg-primitive prim
+      (es-registro-exp()(is-reg?(car args)))
+      (crear-registro-exp () (create-registro args ids))
+      (registro-ref() (reference-reg (car args) (car ids)))
+     ; (set-registro() (setter-reg (car args) (cadr args) (car ids)))
+      )))
+
+;; is-reg?
+(define is-reg?
+  (lambda (reg)
+    (if (null? reg)
+        'true
+        (if(symbol? (caar reg))
+           (is-reg? (cdr reg))
+           'false
+       ))))
+
+;; create registro
+(define create-registro
+  (lambda (args ids)
+    (if (or (null? args) (null? ids))
+        '()
+        (cons (list (car ids)(car args)) (create-registro (cdr args) (cdr ids))))))
+
+;; reference-reg
+
+(define reference-reg
+  (lambda (args id)     
+       (if (null? args)
+          (eopl:error "Error: No se encontró" id)
+           (if (eqv? id (caar args))
+              (car (cdar args))
+              (reference-reg (cdr args) id)))
+    ))
+
+;; setter-reg
+
+;(define setter-reg
+ ; (lambda (L v id)
+  ;  (if (eqv? id (caar L))
+   ;     (cons (list id v) (cdr L))
+    ;    (cons (car L) (setter-reg id v (cdr L)))
+    ;)))
+;; set-reg(reg[x:8;y:9], x, 5, x)
+
+
+;; Ambiente extendido para rec
 (define extend-env-recursive
   (lambda (proc-names idss bodies old-env)
     (let ((len (length proc-names)))
@@ -452,16 +542,7 @@
 ;; Buscar un símbolo en un ambiente
 (define apply-env
   (lambda (env sym)
-    (if (environment? env)
-        (deref (apply-env-ref env sym))
-        (cases environmentCons env
-          (empty-env-cons ()
-                          (eopl:error 'apply-env-ref "No se puede enlazar: ~s" sym))
-          (extended-env-cons (ids vals env)
-                             (let ((pos (rib-find-position sym ids)))
-                               (if (number? pos)
-                                   (deref (a-ref pos vals))
-                                   (apply-env-ref env sym))))))))
+        (deref (apply-env-ref env sym))))
 
 ;; aply-env-ref
 (define apply-env-ref
@@ -479,7 +560,6 @@
 ;; Apply-env para asignación de variables
 (define apply-env-set
   (lambda (env id)
-    (if (environment? env)
         (cases environment env
           (empty-env-record ()
                             (eopl:error 'apply-env-set "No se puede enlazar: ~s" id))
@@ -488,7 +568,7 @@
                                  (if (number? pos)
                                      (a-ref pos vals)
                                      (apply-env-set env id))))
-          ) (eopl:error 'apply-env-set "No es una variable mutable ~s" id))))
+          )))
 
 ;; Funciones auxiliares para encontrar la posición de un símbolo
 
@@ -521,12 +601,15 @@
 ;; Evaluar primitivas binarias
 (define apply-primitiva-binaria
   (lambda (exp1 prim exp2)
+    (if (and (number? exp1) (number? exp2))
     (cases primitiva-binaria prim
       (primitiva-suma () (+ exp1 exp2))
       (primitiva-resta () (- exp1 exp2))
       (primitiva-mult () (* exp1 exp2))
       (primitiva-div () (/ exp1 exp2))
-      (primitiva-residuo () (remainder exp1 exp2)))))
+      (primitiva-residuo () (remainder exp1 exp2)))
+    (eopl:error 'apply-primitiva-binaria "No se puede realizar esta operación entre los argumentos dados ~s" (list exp1 exp2))
+    )))
 
 ;; Evalua operadores en una operación
 (define eval-rands
@@ -537,6 +620,15 @@
   (lambda (rand env)
     (eval-expresiones rand env)))
 
+;; Para unic y var
+(define eval-rands-definiciones
+  (lambda (rands env)
+    (map (lambda (x) (eval-rand-definiciones x env)) rands)))
+
+(define eval-rand-definiciones
+  (lambda (rand env)
+    rand))
+
 ;; Funciones auxiliares para aplicar apply-primitiva-binaria
 (define eval-prim
   (lambda (exp1 prim-bin exp2 env)
@@ -544,11 +636,13 @@
 
 ;; Evaluar primitivas unarias
 (define apply-primitiva-unaria
-  (lambda (prim exp)  
+  (lambda (prim exp)
+    (if (number? exp)
     (cases primitiva-unaria prim
       (primitiva-incrementar () (+ exp 1))
       (primitiva-disminuir () (- exp 1)))
-    ))
+    (eopl:error 'apply-primitiva-unaria "No se puede realizar, no es el argumento esperado ~s" exp)
+    )))
 
 ;; Procedimientos, clausura
 (define-datatype procedimiento procedimiento?
@@ -687,19 +781,6 @@
   (lambda (syms vals env)
     (extended-env-record syms (list->vector vals) env)))
 
-;; Ambiente para cons
-(define-datatype environmentCons environmentCons?
-  (empty-env-cons)
-  
-  (extended-env-cons (syms (list-of symbol?))
-                     (vec vector?)
-                     (env environment?))
-  )
-
-(define extend-env-cons
-  (lambda (syms vals env)
-    (extended-env-cons syms (list->vector vals) env)))
-
 ;; Ambiente vacío:
 (define empty-env  
   (lambda ()
@@ -827,10 +908,10 @@ global (a=2, b=5)
 reg (x = 20, y = 18)")
 
 ;; Ejemplo paso por referencia registro
-(scan&parse "
-global (s = 4)
-invoca validaRegistro(ref-registro v, y)
-")
+;(scan&parse "
+;global (s = 4)
+;invoca validaRegistro(ref-registro v, y)
+;")
 
 ;; Ejemplo get elemento posicion registro
 (scan&parse "
@@ -927,10 +1008,10 @@ vector? ( v1 )
 ")
 
 ;Para registros
-(scan&parse "
-global (x=1, y=2)
-crear-registro ( m = x, n = y)
-")
+;(scan&parse "
+;global (x=1, y=2)
+;crear-registro ( m = x, n = y)
+;")
 
 ;Expresion-bool
 (scan&parse "
@@ -1033,4 +1114,3 @@ invoca factorial(5)
 ")
 
 (interpretador)
-
