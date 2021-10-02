@@ -71,12 +71,8 @@
 ;;                      crear-vector-exp (exps)
 ;;                  ::= set-vector <identificador> = ({<expresion>}*(,))
 ;;                      set-vector-exp (id body)
-;;                  ::= registro? (<expresion>)
-;;                      es-registro-exp (exp)
-;;                  ::= ref-registro <identificador>
-;;                      registro-ref (id)
-;;                  ::= crear-registro({<identificador> = <expresion>}*(,))
-;;                      crear-registro-exp (ids body)
+;;                 ::=  <reg-primitive> (separated-list <expresion> ",")
+;;                               <reg-primapp-exp (exps)>
 ;;                  ::= set-registro <identificador> = ({<identificador> = <expresion>}*(,))
 ;;                      set-registro-exp (id ids body)
 ;;                  ::= <expresion-bool> 
