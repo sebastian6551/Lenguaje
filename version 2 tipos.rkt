@@ -972,7 +972,7 @@
                     prim (list rand1 rand2) exp))
       
       
-      (lista-primapp-exp (prim exp)
+      (lista-primapp-exp-s (prim exp)
                  (type-of-application
                  (type-of-lista-primitive-s prim)
                    (types-of-expressions (list) tenv)
