@@ -51,10 +51,10 @@
 ;;                      evalprim-un-exp (prim-un exp)
 ;;                  ::= (<expresion> <primitiva-binaria> <expresion>)
 ;;                      evalprim-bin-exp (exp1 prim-bin exp2)
-;;                  ::= octal<primitiva-octal-unaria> <expresion>
-;;                      evalprim-octal-un-exp (prim exp)
-;;                  ::= octalbin(<expresion> <primitiva-octal-binaria> <expresion>)
-;;                      evalprim-octal-bin-exp (exp1 prim epx2)
+;;                  ::= octal<primitiva-octal-unaria> (separated-list <expresion> ",")
+;;                      evalprim-octal-primapp-exp (exp)
+;;                  ::= octalbin <primitiva-octal-binaria> (separated-list <expresion> ",")
+;;                      evalprim-octal-bin-primapp-exp(exp)
 ;;                  ::= <cadena-primitive>({<expresion>}*(,))
 ;;                      cadena-primapp-exp (exps)
 ;;                  ::= vacio
@@ -71,8 +71,12 @@
 ;;                      crear-vector-exp (exps)
 ;;                  ::= set-vector <identificador> = ({<expresion>}*(,))
 ;;                      set-vector-exp (id body)
-;;                 ::=  <reg-primitive> (separated-list <expresion> ",")
-;;                               <reg-primapp-exp (exps)>
+;;                  ::= registro? (<expresion>)
+;;                      es-registro-exp (exp)
+;;                  ::= ref-registro <identificador>
+;;                      registro-ref (id)
+;;                  ::= crear-registro({<identificador> = <expresion>}*(,))
+;;                      crear-registro-exp (ids body)
 ;;                  ::= set-registro <identificador> = ({<identificador> = <expresion>}*(,))
 ;;                      set-registro-exp (id ids body)
 ;;                  ::= <expresion-bool> 
@@ -181,8 +185,8 @@
     (expresion (primitiva-unaria expresion) evalprim-un-exp)
     (expresion ("(" expresion primitiva-binaria expresion ")") evalprim-bin-exp)
    
-    (expresion ("octal" primitiva-octal-unaria expresion) evalprim-octal-un-exp)
-    (expresion ("octalbin" "(" expresion primitiva-octal-binaria expresion ")") evalprim-octal-bin-exp)
+    (expresion ("octal" primitiva-octal-unaria "(" (separated-list expresion ",") ")") evalprim-octal-primapp-exp)
+    (expresion ("octalbin" primitiva-octal-binaria "(" (separated-list expresion ",") ")") evalprim-octal-bin-primapp-exp)
 
     ;;Primitivas
     (primitiva-binaria ("+") primitiva-suma)
@@ -406,6 +410,21 @@
                        (let ((args (eval-rands exps env)))
                                 (apply-reg-primitive prim  args ids env)))
 
+;; nuevo octal        
+       ;(evalprim-octal-bin-exp (exp3 prim-oct-bin exp4)(eval-prim exp3 prim-oct-bin exp4 env))
+
+        (evalprim-octal-primapp-exp (prim rands)
+                              (let ((args (eval-rands rands env)))
+                                (apply-primitiva-octal-unaria prim args env)))
+      ; evalprim-octal-bin-primapp-exp
+       (evalprim-octal-bin-primapp-exp (prim rands)
+                              (let ((args (eval-rands rands env)))
+                                (apply-primitiva-octal-binaria prim args env)))
+
+      
+        ;(evalprim-octal-primapp-exp (prim-oct exp)(apply-primitiva-octal-unaria prim-oct (eval-rand exp env)))                        
+      
+
       ;; Procedimientos
       (definir-proc (ids body)(closure ids body env))
       
@@ -502,6 +521,13 @@
   (lambda (num N)
     (if(eqv? num 0) '()
        (cons (modulo num N) (oct-parse (quotient num N) N)))))
+
+;; oct-unparse: convierte un número en base N a base 10
+
+(define oct-unparse
+  (lambda (L N C)
+    (if (null? L) 0
+    (+ (* (car L) (expt N C)) (oct-unparse (cdr L) N (+ 1 C))))))
 
 ;; Funcion AUX sobre primitivas
 ;; reg-unparse:
@@ -679,6 +705,27 @@
     (eopl:error 'apply-primitiva-unaria "No se puede realizar, no es el argumento esperado ~s" exp)
     )))
 
+;; apply-primitiva-octal-binaria: <primitiva-octal-binaria> <list-of-expresion> -> numero
+;;                              : <apply-primitiva-octal-unaria> <list-of-expresion> -> numero
+;;Evaluar Primitiva octal
+(define apply-primitiva-octal-binaria
+  (lambda (prim args env)
+    (cases primitiva-octal-binaria prim
+      (primitiva-octal-suma () (oct-parse (+ (oct-unparse (car args) 16 0) (oct-unparse (cadr args) 16 0)) 16))
+      (primitiva-octal-resta () (oct-parse (- (oct-unparse (car args) 16 0) (oct-unparse (cadr args) 16 0)) 16))
+      (primitiva-octal-mult () (oct-parse (* (oct-unparse (car args) 16 0) (oct-unparse (cadr args) 16 0)) 16))
+       )))
+    
+
+    (define apply-primitiva-octal-unaria
+    (lambda (prim args env)
+    (cases primitiva-octal-unaria prim
+      (primitiva-octal-incrementar () (oct-parse(+ (oct-unparse (car args) 16 0) 1) 16))
+      (primitiva-octal-disminuir () (oct-parse (- (oct-unparse (car args) 16 0) 1) 16)))
+
+      ))
+      
+    
 ;; Procedimientos, clausura
 (define-datatype procedimiento procedimiento?
   (closure
@@ -1045,16 +1092,16 @@ global ()
 ")
 
 ;;Primitiva unaria para octales
-(scan&parse "
-global ()
-octal ++x8(1 1)
-")
+;(scan&parse "
+;global ()
+;octal ++x8(1 1)
+;")
 
 ;;Primitiva binaria para octales
-(scan&parse "
-global ()
-octalbin (x8(1 1) + x8(1 2))
-")
+;(scan&parse "
+;global ()
+;octalbin (x8(1 1) + x8(1 2))
+;")
 
 ;Para cadenas
 (scan&parse "
