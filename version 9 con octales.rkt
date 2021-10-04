@@ -411,11 +411,10 @@
                                 (apply-reg-primitive prim  args ids env)))
 
 ;; nuevo octal        
-       ;(evalprim-octal-bin-exp (exp3 prim-oct-bin exp4)(eval-prim exp3 prim-oct-bin exp4 env))
-
         (evalprim-octal-primapp-exp (prim rands)
                               (let ((args (eval-rands rands env)))
                                 (apply-primitiva-octal-unaria prim args env)))
+      
       ; evalprim-octal-bin-primapp-exp
        (evalprim-octal-bin-primapp-exp (prim rands)
                               (let ((args (eval-rands rands env)))
@@ -515,20 +514,22 @@
     (map (lambda (x) (entero-lit x)) rands)))
 
 ;;___________________________________________________________________________
-
-;; oct-parse: convierte un número en base 10 a base N
-(define oct-parse
-  (lambda (num N)
-    (if(eqv? num 0) '()
-       (cons (modulo num N) (oct-parse (quotient num N) N)))))
-
-;; oct-unparse: convierte un número en base N a base 10
-(define oct-unparse
- (lambda (L N C )
+;; determina tamaño de la lista
+(define length-array
+ (lambda (L )
  (if (null? L)
  0
- L)))
-  
+  (+ 1 (length-array (cdr L))))))
+
+;; oct-unparse: convierte el octal en decimal
+(define oct-unparse
+  (lambda (L)
+   (if (null? L)
+   0
+   (let ((potencia (- length-array L 1)))
+    (+ (* (car L) (expt 8 potencia)) (oct-unparse (cdr L)))
+   ))))
+      
 ;;(define oct-unparse
  ;; (lambda (L)
    ;; (let ((Potencia (-(length-array L) 1))))))
@@ -719,10 +720,14 @@
 (define apply-primitiva-octal-binaria
   (lambda (prim args env)
     (cases primitiva-octal-binaria prim
-      (primitiva-octal-suma () (oct-parse (+ (oct-unparse(+ (* (car args) (expt 10 0))) (oct-unparse (cdr args) 10 (+ 1 0))))))
-      (primitiva-octal-resta () (oct-parse (-(oct-unparse(+ (* (car args) (expt 10 0))) (oct-unparse (cdr args) 10 (+ 1 0))))))
-      (primitiva-octal-mult () (oct-parse (* (oct-unparse(+ (* (car args) (expt 10 0))) (oct-unparse (cdr args) 10 (+ 1 0))))))
-       )))
+     ;(primitiva-octal-suma () (+ (oct-unparse (car args) 16 0) (oct-unparse (cadr args) 16 0)) 16))
+       
+
+      (primitiva-octal-suma () (+ (* (car args) (expt 8 0))) (oct-unparse (cdr args) 8 (+ 1 0)))
+      (primitiva-octal-resta () (-(* (car args) (expt 8 0))) (oct-unparse (cdr args) 8 (+ 1 0)))
+      (primitiva-octal-mult () (* (* (car args) (expt 8 0))) (oct-unparse (cdr args) 8 (+ 1 0)))
+  )))
+       
       ;
      
       ;(primitiva-octal-suma () (oct-parse (+ (oct-unparse (car args) 16 0) (oct-unparse (cadr args) 16 0)) 16))
@@ -734,10 +739,10 @@
     (define apply-primitiva-octal-unaria
     (lambda (prim args env)
     (cases primitiva-octal-unaria prim
-      (primitiva-octal-incrementar () (oct-parse(+ (oct-unparse (car args) 16 0) 1) 16))
-      (primitiva-octal-disminuir () (oct-parse (- (oct-unparse (car args) 16 0) 1) 16)))
+      (primitiva-octal-incrementar () (+ (car args) 16 0)1)
+      (primitiva-octal-disminuir () (-(car args) 16 0) 1))))
 
-      ))
+     
       
     
 ;; Procedimientos, clausura
