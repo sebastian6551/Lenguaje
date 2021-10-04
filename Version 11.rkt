@@ -173,7 +173,6 @@
    
     (expresion ( "funcion" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc)
     (expresion ( "invoca" expresion "(" (separated-list expresion ",") ")") invocar-proc)
-    (expresion ( "funcion!" "(" (separated-list identificador ",") ")" "{" expresion "}" ) definir-proc-rec)
     (expresion ("->" identificador "=" expresion) modificar-exp)
    
     (expresion (primitiva-unaria expresion) evalprim-un-exp)
@@ -215,18 +214,12 @@
     (expresion (lista-primitive-s "(" (separated-list expresion ",")")") lista-primapp-exp-s)
    
     ;; Para vectores
-    (expresion ("ref-vector" "(" entero ")" identificador) vector-reff)
     (expresion ("vector?" "(" expresion ")") es-vector-exp)
-    (expresion ("crear-vector" "(" (separated-list expresion ",")")") crear-vector-exp)
-
-    ;; Operacion sobre primitiva
-    (expresion (reg-primitive "(" (separated-list expresion "," identificador  "," )")")
-              reg-primapp-exp)
-     
-    (expresion ("vector-pos" identificador "(" entero ")" ) vector-pos-exp)
+    (expresion ("crear-vector" "(" (separated-list expresion ",")")") crear-vector-exp)     
+    (expresion ("ref-vector" "(" expresion "," entero ")" ) vector-ref-exp)
    
     ;; Modifica el elemento en la posicion n de un vector
-    (expresion ("set-vector" identificador "(" entero "," expresion ")") set-vector-exp)
+    (expresion ("set-vector" expresion "(" entero "," expresion ")") set-vector-exp)
    
     ;; Para registros
     (reg-primitive ("registro?")es-registro-exp)
@@ -234,6 +227,9 @@
     (reg-primitive ("crear-registro")crear-registro-exp)
     (reg-primitive ("set-reg") set-registro)
 
+    (expresion (reg-primitive "(" (separated-list expresion "," identificador  "," )")")
+              reg-primapp-exp)
+    
     (expresion ("registro-pos" identificador "(" entero ")" ) registro-pos-exp)
     (expresion ("set-registro" identificador "(" entero "," expresion ")") set-registro-exp)
 
@@ -365,7 +361,7 @@
                               (eopl:error 'primitiva-cadena "Se espera algún argumento")
                               (apply-prim-cadena prim exps)))
       
-      ;; Constructores
+      ;; Listas
       (lista-exp (exps) (car (list (eval-rands exps env))))
 
       (vacio () empty)
@@ -376,26 +372,36 @@
       (lista-primapp-exp-s (prim exps)
                            (let ((args (eval-rands exps env)))
                              (apply-lista-primitive-s prim args)))
-     
+
+      ;; Vectores
       (vector-exp (exps)
                (let ((args (eval-rands exps env)))
                  (list->vector args)))
 
       (es-vector-exp (exp)
-               (if (vector? exp)#t #f))
+               (if (vector? (eval-expresiones exp env))#t #f))
 
       (crear-vector-exp (exps)
                (let ((args (eval-rands exps env)))
                  (list->vector args)))
 
-      (vector-pos-exp (id pos)
-                    (let ((vect (re-apply-env env id)))
-                      (vector-ref vect pos)))
+      (vector-ref-exp (id pos)
+                      (let ((vec (eval-expresiones id env)))
+                        (if (vector? vec)
+                            (if (and (> (vector-length vec) pos) (<= 0 pos))
+                                (vector-ref vec pos)
+                                (eopl:error 'vector-ref "La posición debe ser menor a ~s y no puede ser negativa" (vector-length vec)))
+                            (eopl:error 'vector-ref "Se espera un vector como argumento no ~s" vec))))
                    
       (set-vector-exp (id pos exp)
-                 (let ((vect (re-apply-env env id)))
-                      (vector-set! vect pos (eval-expresiones exp env))))
+                      (let ((vec (eval-expresiones id env)))
+                        (if (vector? vec)
+                            (if (and (> (vector-length vec) pos) (<= 0 pos))
+                                (vector-set! vec pos (eval-expresiones exp env))
+                                (eopl:error 'vector-ref "La posición debe ser menor a ~s y no puede ser negativa" (vector-length vec)))
+                            (eopl:error 'vector-ref "Se espera un vector como argumento no ~s" vec))))
       
+      ;; Registros
       (reg-exp (id exp ids exps) (reg-unparse id exp ids exps env))
       
       ;; Primitivas
@@ -499,10 +505,6 @@
       )))
 
 ;; Para cadenas
-      ;(cadena-primitive ("longitud-cadena") longitud-cadena)
-      ;(cadena-primitive ("concatenar") concatenar)
-      ;(expresion (cadena-primitive "(" (separated-list expresion ",")")") cadena-primapp-exp)
-
 (define apply-prim-cadena
   (lambda (prim exps)
     (cases cadena-primitive prim
@@ -622,8 +624,6 @@
        (cons (list id v) (cdr L))
     (cons (car L) (setter-reg id v (cdr L)))
    )))
-;; set-reg(reg (x=8, y=9)x, 5, x)
-
 
 ;; Ambiente extendido para rec
 (define extend-env-recursive
@@ -1088,13 +1088,13 @@ end
 ;; Ejemplo paso por referencia vector
 (scan&parse "
 global (s = 4)
-invoca validaVector(ref-vector (0) v, y)
+invoca validaVector(ref-vector (v, 0), y)
 ")
 
 ;; Ejemplo get posicion vector
 (scan&parse "
 global (suma = funcion(x,y){(x+y)}, x = vector(1,2,3))
-invoca suma(vector-pos x(0), 1)
+invoca suma(ref-vector (x, 0), 1)
 ")
 
 ;; Ejemplo constructor de Datos definido registro
