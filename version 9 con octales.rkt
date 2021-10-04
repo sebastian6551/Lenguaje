@@ -739,8 +739,8 @@
     (define apply-primitiva-octal-unaria
     (lambda (prim args env)
     (cases primitiva-octal-unaria prim
-      (primitiva-octal-incrementar () (+ (car args) 16 0)1)
-      (primitiva-octal-disminuir () (-(car args) 16 0) 1))))
+      (primitiva-octal-incrementar () (+ (car args) 8 0)1)
+      (primitiva-octal-disminuir () (-(car args) 8 0) 1))))
 
      
       
